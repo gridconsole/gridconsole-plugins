@@ -16,10 +16,10 @@
     "report.redactor"
   ],
   "activation": [],
-  "settings": [
-    ["rules", "path", "<config>/redact.toml"],
-    ["redactFileNames", "bool", "true"],
-    ["keepStackTraces", "bool", "true"]
-  ],
+  "configuration": {
+    "rules": {"type": "path", "title": "Rules file", "default": "<config>/redact.toml"},
+    "redactFileNames": {"type": "bool", "title": "Redact file names", "default": true},
+    "keepStackTraces": {"type": "bool", "title": "Keep stack traces", "default": true}
+  },
   "main": "index.js"
 }

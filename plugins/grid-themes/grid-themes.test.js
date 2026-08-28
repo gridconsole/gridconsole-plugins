@@ -12,10 +12,13 @@ test('manifest parses and matches the design roster', () => {
   assert.strictEqual(manifest.publisher, 'grid console');
   assert.deepStrictEqual(manifest.points, ['theme.register']);
   assert.deepStrictEqual(manifest.hooks, []);
-  assert.deepStrictEqual(manifest.settings, [
-    ['default', 'enum', 'Grid dark'],
-    ['followSystem', 'bool', 'false'],
-  ]);
+  // The manifest's `configuration` block, verbatim — what the host parses
+  // into descriptors and the Plugins pane draws a control from.
+  assert.deepStrictEqual(manifest.configuration, {
+    "default": {"type": "enum", "title": "Default theme", "default": "grid", "options": ["grid", "dusk", "light", "hc"]},
+    "followSystem": {"type": "bool", "title": "Follow system appearance", "default": false}
+  });
+  assert.strictEqual(manifest.settings, undefined, 'the Phase 2 triple is gone');
 });
 
 test('activate contributes the four themes, ids per theme.ts, labels per the design', () => {

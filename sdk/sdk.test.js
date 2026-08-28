@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const { defineHook, fakeCard, fakeCtx, fakePluginContext } = require('./index.js');
+const { defineHook, fakeCard, fakeCtx, fakePluginContext, declaredDefaults } = require('./index.js');
 
 test('defineHook is identity', () => {
   const fn = (ctx) => ctx.pass();
@@ -53,4 +53,38 @@ test('fakePluginContext records registrations and enforces the manifest', () => 
 
   off();
   assert.strictEqual(ctx.hookRegistrations.length, 0);
+});
+
+// --- settings on the fake context -----------------------------------------
+
+test('declaredDefaults reads the value-bearing settings and skips the rest', () => {
+  assert.deepStrictEqual(declaredDefaults({
+    configuration: {
+      a: { type: 'bool', default: true },
+      b: { type: 'enum', options: ['p', 'q'] },
+      c: { type: 'string' },
+      d: { type: 'number' },
+      e: { type: 'string[]' },
+      f: { type: 'page', default: 'go' },     // a link holds nothing
+      g: { type: 'map', default: 'x' },       // no control for it, so no value
+      h: 'not-an-object',
+    },
+  }), { a: true, b: 'p', c: '', d: 0, e: [] });
+  assert.deepStrictEqual(declaredDefaults({}), {});
+  assert.deepStrictEqual(declaredDefaults({ configuration: [] }), {});
+  assert.deepStrictEqual(declaredDefaults(null), {});
+});
+
+test('fakePluginContext seeds ctx.settings from the manifest, and values override', () => {
+  const manifest = {
+    id: 'dev.example.thing',
+    hooks: [],
+    points: [],
+    configuration: { label: { type: 'string', default: 'declared' }, flag: { type: 'bool', default: true } },
+  };
+  assert.deepStrictEqual(fakePluginContext(manifest).settings, { label: 'declared', flag: true });
+  assert.deepStrictEqual(fakePluginContext(manifest, { flag: false }).settings, { label: 'declared', flag: false });
+  // frozen, like the host's — a plugin that writes to it is not changing
+  // anything the host will ever read back
+  assert.throws(() => { fakePluginContext(manifest).settings.label = 'x'; }, TypeError);
 });

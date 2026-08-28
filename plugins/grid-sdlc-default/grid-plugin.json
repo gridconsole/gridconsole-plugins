@@ -20,10 +20,10 @@
     "card.section"
   ],
   "activation": [],
-  "settings": [
-    ["stages", "enum[]", "inbox, prepare, doing, review, deliver, verify, close"],
-    ["requireSections", "bool", "true"],
-    ["autoAdvanceVerify", "bool", "true"]
-  ],
+  "configuration": {
+    "stages": {"type": "enum[]", "title": "Stages", "default": "inbox, prepare, doing, review, deliver, verify, close"},
+    "requireSections": {"type": "bool", "title": "Require the Review contract", "default": true},
+    "autoAdvanceVerify": {"type": "bool", "title": "Advance to verify automatically", "default": true}
+  },
   "main": "index.js"
 }

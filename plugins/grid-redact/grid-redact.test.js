@@ -12,11 +12,14 @@ test('manifest parses and matches the design roster', () => {
   assert.strictEqual(manifest.publisher, 'grid console');
   assert.deepStrictEqual(manifest.points, ['report.redactor']);
   assert.deepStrictEqual(manifest.hooks, []);
-  assert.deepStrictEqual(manifest.settings, [
-    ['rules', 'path', '<config>/redact.toml'],
-    ['redactFileNames', 'bool', 'true'],
-    ['keepStackTraces', 'bool', 'true'],
-  ]);
+  // The manifest's `configuration` block, verbatim — what the host parses
+  // into descriptors and the Plugins pane draws a control from.
+  assert.deepStrictEqual(manifest.configuration, {
+    "rules": {"type": "path", "title": "Rules file", "default": "<config>/redact.toml"},
+    "redactFileNames": {"type": "bool", "title": "Redact file names", "default": true},
+    "keepStackTraces": {"type": "bool", "title": "Keep stack traces", "default": true}
+  });
+  assert.strictEqual(manifest.settings, undefined, 'the Phase 2 triple is gone');
 });
 
 test('activate contributes the report.redactor ownership stub', () => {

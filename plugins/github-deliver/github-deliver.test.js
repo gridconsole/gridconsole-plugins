@@ -12,7 +12,15 @@ test('manifest parses and matches the design roster', () => {
   assert.strictEqual(manifest.publisher, 'grid console');
   assert.deepStrictEqual(manifest.points, ['deliver.target']);
   assert.deepStrictEqual(manifest.hooks, []);
-  assert.strictEqual(manifest.settings.length, 4);
+  // The manifest's `configuration` block, verbatim — what the host parses
+  // into descriptors and the Plugins pane draws a control from.
+  assert.deepStrictEqual(manifest.configuration, {
+    "mode": {"type": "enum", "title": "Deliver as", "default": "pull request", "options": ["pull request", "direct push"]},
+    "draft": {"type": "bool", "title": "Open as draft", "default": false},
+    "reviewers": {"type": "string[]", "title": "Reviewers — empty means from CODEOWNERS", "default": []},
+    "titleFrom": {"type": "enum", "title": "PR title from", "default": "card summary", "options": ["card summary", "branch name", "first commit"]}
+  });
+  assert.strictEqual(manifest.settings, undefined, 'the Phase 2 triple is gone');
 });
 
 test('activate contributes the GitHub deliver target', () => {

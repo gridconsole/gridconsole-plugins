@@ -12,10 +12,13 @@ test('manifest parses and matches the design roster', () => {
   assert.strictEqual(manifest.publisher, 'grid console');
   assert.deepStrictEqual(manifest.points, ['usage.reporter']);
   assert.deepStrictEqual(manifest.hooks, []);
-  assert.deepStrictEqual(manifest.settings, [
-    ['currency', 'enum', 'EUR'],
-    ['warnAt', 'number', '80% of plan week'],
-  ]);
+  // The manifest's `configuration` block, verbatim — what the host parses
+  // into descriptors and the Plugins pane draws a control from.
+  assert.deepStrictEqual(manifest.configuration, {
+    "currency": {"type": "enum", "title": "Currency", "default": "EUR", "options": ["EUR", "USD", "GBP"]},
+    "warnAt": {"type": "number", "title": "Warn at % of plan week", "default": 80}
+  });
+  assert.strictEqual(manifest.settings, undefined, 'the Phase 2 triple is gone');
 });
 
 test('activate contributes the usage.reporter ownership stub', () => {

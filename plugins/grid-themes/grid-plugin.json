@@ -16,9 +16,9 @@
     "theme.register"
   ],
   "activation": [],
-  "settings": [
-    ["default", "enum", "Grid dark"],
-    ["followSystem", "bool", "false"]
-  ],
+  "configuration": {
+    "default": {"type": "enum", "title": "Default theme", "default": "grid", "options": ["grid", "dusk", "light", "hc"]},
+    "followSystem": {"type": "bool", "title": "Follow system appearance", "default": false}
+  },
   "main": "index.js"
 }

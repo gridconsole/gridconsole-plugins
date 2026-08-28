@@ -13,13 +13,41 @@
   },
   "hooks": [],
   "points": [
-    "file.explain"
+    "file.explain",
+    "editor.contextMenu",
+    "keymap.command"
+  ],
+  "commands": [
+    "grid-explain:describe-selection"
   ],
   "activation": [],
-  "settings": [
-    ["model", "enum", "haiku"],
-    ["inlineNotes", "bool", "true"],
-    ["refreshOn", "enum", "file change"]
-  ],
+  "configuration": {
+    "model": {
+      "type": "enum",
+      "title": "Summary model",
+      "default": "haiku",
+      "options": [
+        "fable",
+        "opus",
+        "sonnet",
+        "haiku"
+      ]
+    },
+    "inlineNotes": {
+      "type": "bool",
+      "title": "Inline notes",
+      "default": true
+    },
+    "refreshOn": {
+      "type": "enum",
+      "title": "Refresh on",
+      "default": "file change",
+      "options": [
+        "file change",
+        "save",
+        "manual"
+      ]
+    }
+  },
   "main": "index.js"
 }

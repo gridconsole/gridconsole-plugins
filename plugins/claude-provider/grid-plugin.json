@@ -17,16 +17,16 @@
     "llm.provider"
   ],
   "activation": [],
-  "settings": [
-    ["commands.prepare", "string", "claude /prepare {card.md}"],
-    ["commands.build", "string", "claude /build {card.md} --plan {plan.md}"],
-    ["commands.review", "string", "claude /self-review {diff}"],
-    ["prompts.prepare", "prompt", ".claude/commands/prepare.md · edit"],
-    ["prompts.build", "prompt", ".claude/commands/build.md · edit"],
-    ["prompts.review", "prompt", ".claude/commands/self-review.md · edit"],
-    ["defaultModel", "enum", "sonnet"],
-    ["mcp.servers", "page", "4 configured → Settings › MCP servers"],
-    ["skills", "page", "6 installed → Settings › Skills"]
-  ],
+  "configuration": {
+    "commands.prepare": {"type": "string", "title": "Prepare command", "default": "claude /prepare {card.md}"},
+    "commands.build": {"type": "string", "title": "Build command", "default": "claude /build {card.md} --plan {plan.md}"},
+    "commands.review": {"type": "string", "title": "Self-review command", "default": "claude /self-review {diff}"},
+    "prompts.prepare": {"type": "prompt", "title": "Prepare prompt", "default": ".claude/commands/prepare.md"},
+    "prompts.build": {"type": "prompt", "title": "Build prompt", "default": ".claude/commands/build.md"},
+    "prompts.review": {"type": "prompt", "title": "Self-review prompt", "default": ".claude/commands/self-review.md"},
+    "defaultModel": {"type": "enum", "title": "Default model", "default": "sonnet", "options": ["fable", "opus", "sonnet", "haiku"]},
+    "mcp.servers": {"type": "page", "title": "MCP servers", "default": "Settings › MCP servers"},
+    "skills": {"type": "page", "title": "Skills", "default": "Settings › Skills"}
+  },
   "main": "index.js"
 }

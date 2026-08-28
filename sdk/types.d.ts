@@ -14,8 +14,36 @@ export type Stage = 'inbox' | 'prepare' | 'doing' | 'review' | 'deliver' | 'veri
  */
 export type HookName = `before:${Stage}` | `after:${Stage}` | 'on:attention';
 
-/** One manifest settings row: [key, type, value]. Declarative only — the
- *  Settings › Plugins page renders these; the host does not interpret them. */
+/** The types a setting may declare.
+ *
+ *  The first six hold a value the host stores and hands back at activation.
+ *  `page` and `prompt` name somewhere to go — the Settings pane renders them
+ *  as links to the pane that owns them — and hold nothing. A type outside this
+ *  union still loads: the pane shows the row as a readout saying there is no
+ *  control for it, rather than the plugin failing to load over a rendering
+ *  question. */
+export type SettingType =
+  | 'bool' | 'string' | 'number' | 'enum' | 'string[]' | 'path'
+  | 'page' | 'prompt';
+
+/** One declared setting. `scope: 'project'` parses but is not honoured yet —
+ *  this build stores values, and plugin enablement, per workspace only. */
+export interface SettingSpec {
+  type: SettingType | string;
+  /** The value when nobody has chosen one. Required in practice for `enum`,
+   *  where it must be a member of `options`. */
+  default?: string | number | boolean | string[];
+  /** The label the pane shows instead of the raw key. */
+  title?: string;
+  /** Required for `enum`; narrows the accepted values for `string[]`. */
+  options?: string[];
+  scope?: 'workspace' | 'project';
+}
+
+/** Phase 2's settings row: `[key, type, value]`. Still read and normalised
+ *  into a `configuration` entry, so an unmigrated plugin keeps loading — but
+ *  it cannot express an option list, which is why an `enum` declared this way
+ *  can only be printed and never picked. Declare `configuration` instead. */
 export type SettingRow = [key: string, type: string, value: string];
 
 /** The sixteen published extension points. A point outside this union is
@@ -70,6 +98,15 @@ export interface PluginManifest {
   /** Every point passed to `contribute` must be declared here. */
   points?: ExtensionPoint[];
   activation?: ActivationEvent[];
+  /** Every name passed to `commands.register` must be declared here, and each
+   *  must be namespaced `<pluginId>:<name>`. The declaration is what the host
+   *  checks an invoke against, so a command missing from this list cannot be
+   *  called however the plugin registered it. */
+  commands?: CommandId[];
+  /** What this plugin lets the workspace configure. The values come back on
+   *  `PluginContext.settings` when the plugin activates. */
+  configuration?: Record<string, SettingSpec>;
+  /** @deprecated Phase 2's shape. Use `configuration`. */
   settings?: SettingRow[];
   /** Entry point relative to the plugin directory; defaults to "index.js". */
   main?: string;
@@ -141,17 +178,49 @@ export type HookFn = (ctx: HookContext) => void | Promise<void>;
 export interface PluginContext {
   id: string;
   manifest: Required<Pick<PluginManifest, 'id' | 'version' | 'main'>> & PluginManifest & { dir: string };
+  /**
+   * This workspace's values for the settings the manifest declares, by key —
+   * whatever the operator chose, or the declared default where they have not.
+   * Only the value-bearing types appear; a `page` or `prompt` row holds
+   * nothing and is absent here.
+   *
+   * A SNAPSHOT, frozen, taken when this plugin was activated. When a value
+   * changes the host disposes and re-activates the plugin, so `activate()`
+   * runs again with the new object — read it there rather than caching a
+   * single key, and do not expect this object to change under you.
+   */
+  settings: Readonly<Record<string, string | number | boolean | string[]>>;
   log(msg: string): void;
   hooks: {
     /** Register a transition hook; the name must be declared in the
      *  manifest's `hooks`. Returns an unregister function. */
     on(name: HookName, fn: HookFn): () => void;
   };
+  commands: {
+    /**
+     * Expose a function the UI can call back into, by id. The name must be
+     * declared in the manifest's `commands`. Returns an unregister function.
+     *
+     * This is the other half of a UI contribution. A payload crosses to the
+     * host once, at activation, as data — so a contributed menu row or
+     * keyboard command carries a command id and this is what that id reaches.
+     * Args in and the answer out are plain JSON; nothing else crosses.
+     */
+    register(name: CommandId, fn: CommandFn): () => void;
+  };
   /** Append a payload to a contribution registry; the point must be declared
    *  in the manifest's `points`. Registries are dumb lists the owning
    *  subsystem reads in load order. */
   contribute(point: string, payload: unknown): void;
 }
+
+/** `<pluginId>:<name>`. Namespaced because a bare id would collide with
+ *  Grid's own commands in the keymap, and share the operator's stored
+ *  rebinding with them. */
+export type CommandId = `${string}:${string}`;
+
+/** What a registered command does. Args and answer are plain JSON. */
+export type CommandFn = (args: Record<string, unknown>) => unknown | Promise<unknown>;
 
 /** A plugin entry point exports this. */
 export interface Plugin {
@@ -198,6 +267,32 @@ export interface DeliverTargetPayload {
   id: string;
   name: string;
   action: string;
+}
+
+/** One row a plugin adds to the code view's right-click menu.
+ *
+ *  `when` is evaluated by the renderer against what is true at click time,
+ *  because the payload itself is static — it crossed at activation. A row that
+ *  cannot run says why instead of rendering dead. */
+export interface ContextMenuItem {
+  /** The command to invoke; must be one this plugin declares and registers. */
+  command: CommandId;
+  label: string;
+  /** 'always' | 'file' (a file is open) | 'selection' (text is selected). */
+  when?: 'always' | 'file' | 'selection';
+}
+
+/** One command a plugin adds to the keymap table.
+ *
+ *  No accelerator: a contributed command arrives unbound and the operator
+ *  gives it a key, which is what keeps a plugin from silently claiming a chord
+ *  Grid already answers. */
+export interface KeymapCommand {
+  command: CommandId;
+  label: string;
+  /** 'app' | 'card' | 'view' — which group the Settings table files it under. */
+  group?: 'app' | 'card' | 'view';
+  when?: 'always' | 'file' | 'selection';
 }
 
 /** One entry of a `theme.register` contribution (contributed as an array). */

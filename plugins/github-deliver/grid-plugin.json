@@ -16,11 +16,11 @@
     "deliver.target"
   ],
   "activation": [],
-  "settings": [
-    ["mode", "enum", "pull request"],
-    ["draft", "bool", "false"],
-    ["reviewers", "string[]", "from CODEOWNERS"],
-    ["titleFrom", "enum", "card summary"]
-  ],
+  "configuration": {
+    "mode": {"type": "enum", "title": "Deliver as", "default": "pull request", "options": ["pull request", "direct push"]},
+    "draft": {"type": "bool", "title": "Open as draft", "default": false},
+    "reviewers": {"type": "string[]", "title": "Reviewers — empty means from CODEOWNERS", "default": []},
+    "titleFrom": {"type": "enum", "title": "PR title from", "default": "card summary", "options": ["card summary", "branch name", "first commit"]}
+  },
   "main": "index.js"
 }

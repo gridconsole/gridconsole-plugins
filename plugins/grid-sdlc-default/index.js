@@ -106,15 +106,114 @@ function reviewGate(ctx) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// The stage contracts: what a card must carry, stage by stage.
+//
+// The design's `stageCfg` fixture, and until now a hardcoded constant in core
+// (settingsModel.ts STAGE_CONTRACTS) rendered directly under the STAGES table
+// this plugin already contributes. That was the visible version of the defect
+// `card.section` exists to fix: switch this plugin off and the table above
+// emptied while the card below kept drawing all seven stages.
+//
+// Colour is deliberately NOT in the payload. Core derives it from the stage
+// name through stageTone(), whose order is the one and only place the
+// --ob-sN slot per stage is decided, so a workflow and its contracts cannot
+// disagree about what colour REVIEW is.
+//
+// Chip kinds: sec (plain section) · auto (system-provided) · on/off (a setting
+// pair) · ok (check-style) · ghost (dashed add-affordance).
+const ch = (label, kind = 'sec') => ({ label, kind });
+
+const CONTRACTS = [
+  {
+    stage: 'INBOX',
+    scope: 'Captured, not started. Nothing runs; the card waits for you or a rule.',
+    chips: [ch('no contract: just a queue', 'auto')],
+  },
+  {
+    stage: 'PREPARE',
+    scope: 'Refines the card until it is pickable. It asks its questions here; you answer and edit.',
+    chips: [
+      ch('Summary'), ch('What I will change'), ch('How I will know it works'),
+      ch('Requires your attention'), ch('Expected files I will touch'),
+      ch('List of tasks → agent tasks in Doing'), ch('Asked questions, with your answers'),
+      ch('+ add section', 'ghost'),
+    ],
+  },
+  {
+    stage: 'DOING',
+    scope: 'Builds. The card is the live progress report while the agent works.',
+    chips: [
+      ch('Summary'), ch('Changes so far'), ch('Changes still to do'),
+      ch('Task list · ✓ as they finish'), ch('Requires your attention'),
+      ch('+ add section', 'ghost'),
+    ],
+  },
+  {
+    // NOTE: these chips are the DOCUMENTED contract, and they are not the one
+    // that runs. reviewGate above holds before:review to REVIEW_SECTIONS, the
+    // five the engine actually asks the agent for and review.js parses. The
+    // two vocabularies now sit in one file for the first time, which is what
+    // makes collapsing them a later edit rather than a later archaeology; it
+    // is deliberately NOT collapsed here, because changing what the gate
+    // refuses is a behaviour change and this contribution is a wiring change.
+    stage: 'REVIEW',
+    scope: 'Everything Prepare promised and Doing did, side by side. The app is started locally, port on the card.',
+    chips: [
+      ch('All Prepare + Doing sections', 'auto'), ch('✓ what is done'),
+      ch('⚠ changed from the original plan'), ch('Requires your attention'),
+      ch('review: per change', 'on'), ch('review: all at once', 'off'),
+      ch('start the app locally · show port', 'ok'), ch('+ add section', 'ghost'),
+    ],
+  },
+  {
+    stage: 'DELIVER',
+    scope: 'Creates the delivery as configured, and reports back with the link.',
+    chips: [
+      ch('deliver by: pull request', 'on'), ch('merge request', 'off'),
+      ch('push to branch', 'off'), ch('report: link + summary on the card', 'auto'),
+    ],
+  },
+  {
+    stage: 'VERIFY',
+    scope: 'Checks the delivery landed and nothing around it broke.',
+    chips: [
+      ch('PR merged', 'ok'), ch('deploy green', 'ok'),
+      ch('regression sweep over the rest', 'ok'), ch('+ add check', 'ghost'),
+    ],
+  },
+  {
+    stage: 'CLOSE',
+    scope: 'Wraps up: memory written, documentation updated, one last conflict check.',
+    chips: [
+      ch('write memory'), ch('update docs'), ch('final conflict check'),
+      ch('+ add step', 'ghost'),
+    ],
+  },
+];
+
 function activate(context) {
   context.contribute('sdlc.workflow', { stages: STAGES });
-  // before:review is the contract above. before:deliver stays declared and
-  // unregistered: its row reads "app starts locally · you approved", and
-  // nothing in the engine can observe either of those, so a gate there would
-  // be a guess wearing a rule's clothes. card.section is likewise still
-  // declared and uncontributed — nothing in core reads that point yet, so a
-  // contribution to it would be invisible.
-  context.hooks.on('before:review', reviewGate);
+  context.contribute('card.section', { stages: CONTRACTS });
+  // before:review is the contract above, and it is the manifest's
+  // `requireSections` that decides whether it runs at all. Read from
+  // context.settings, which the host resolves from the workspace and hands
+  // over at activation; the default is true, so a workspace that has never
+  // touched the setting behaves exactly as it did before this was wired.
+  //
+  // The hook is not REGISTERED when the setting is off, rather than registered
+  // and short-circuiting inside reviewGate. A gate that runs and always passes
+  // still shows up as this plugin's hook on every move; not registering means
+  // the arrow genuinely has no contract on it, which is what "off" says.
+  //
+  // A change to the value re-activates this plugin (pluginhost.setSettings),
+  // so this runs again and the registration follows the setting live.
+  //
+  // before:deliver stays declared and unregistered: its row reads "app starts
+  // locally · you approved", and nothing in the engine can observe either of
+  // those, so a gate there would be a guess wearing a rule's clothes.
+  const settings = context.settings || {};
+  if (settings.requireSections !== false) context.hooks.on('before:review', reviewGate);
 }
 
-module.exports = { activate, STAGES, reviewGate, missingReviewSections, REVIEW_SECTIONS };
+module.exports = { activate, STAGES, CONTRACTS, reviewGate, missingReviewSections, REVIEW_SECTIONS };
