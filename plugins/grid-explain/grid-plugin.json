@@ -1,0 +1,25 @@
+{
+  "id": "grid-explain",
+  "name": "grid-explain",
+  "version": "0.1.0",
+  "apiVersion": ">=0.1",
+  "publisher": "grid console",
+  "description": "The code view’s file summaries and inline notes, and which model writes them.",
+  "permissions": {
+    "network": [],
+    "cardWrite": false,
+    "filesystem": [],
+    "shell": false
+  },
+  "hooks": [],
+  "points": [
+    "file.explain"
+  ],
+  "activation": [],
+  "settings": [
+    ["model", "enum", "haiku"],
+    ["inlineNotes", "bool", "true"],
+    ["refreshOn", "enum", "file change"]
+  ],
+  "main": "index.js"
+}

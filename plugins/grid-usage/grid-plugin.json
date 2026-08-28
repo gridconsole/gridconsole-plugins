@@ -1,0 +1,24 @@
+{
+  "id": "grid-usage",
+  "name": "grid-usage",
+  "version": "0.1.0",
+  "apiVersion": ">=0.1",
+  "publisher": "grid console",
+  "description": "Token and cost accounting behind Insights.",
+  "permissions": {
+    "network": [],
+    "cardWrite": false,
+    "filesystem": [],
+    "shell": false
+  },
+  "hooks": [],
+  "points": [
+    "usage.reporter"
+  ],
+  "activation": [],
+  "settings": [
+    ["currency", "enum", "EUR"],
+    ["warnAt", "number", "80% of plan week"]
+  ],
+  "main": "index.js"
+}

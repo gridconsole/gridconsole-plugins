@@ -1,0 +1,25 @@
+{
+  "id": "grid-redact",
+  "name": "grid-redact",
+  "version": "0.1.0",
+  "apiVersion": ">=0.1",
+  "publisher": "grid console",
+  "description": "Obfuscation applied to problem reports before you send one.",
+  "permissions": {
+    "network": [],
+    "cardWrite": false,
+    "filesystem": [],
+    "shell": false
+  },
+  "hooks": [],
+  "points": [
+    "report.redactor"
+  ],
+  "activation": [],
+  "settings": [
+    ["rules", "path", "<config>/redact.toml"],
+    ["redactFileNames", "bool", "true"],
+    ["keepStackTraces", "bool", "true"]
+  ],
+  "main": "index.js"
+}

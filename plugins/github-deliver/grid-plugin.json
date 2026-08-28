@@ -1,0 +1,26 @@
+{
+  "id": "github-deliver",
+  "name": "github-deliver",
+  "version": "0.1.0",
+  "apiVersion": ">=0.1",
+  "publisher": "grid console",
+  "description": "What Deliver does: commit, push, open the PR, report back. GitLab and Azure are siblings.",
+  "permissions": {
+    "network": [],
+    "cardWrite": false,
+    "filesystem": [],
+    "shell": false
+  },
+  "hooks": [],
+  "points": [
+    "deliver.target"
+  ],
+  "activation": [],
+  "settings": [
+    ["mode", "enum", "pull request"],
+    ["draft", "bool", "false"],
+    ["reviewers", "string[]", "from CODEOWNERS"],
+    ["titleFrom", "enum", "card summary"]
+  ],
+  "main": "index.js"
+}

@@ -1,0 +1,29 @@
+{
+  "id": "grid-sdlc-default",
+  "name": "grid-sdlc-default",
+  "version": "0.1.0",
+  "apiVersion": ">=0.1",
+  "publisher": "grid console",
+  "description": "The seven stages, their contracts and their per-stage commands. Swap it and the board follows.",
+  "permissions": {
+    "network": [],
+    "cardWrite": false,
+    "filesystem": [],
+    "shell": false
+  },
+  "hooks": [
+    "before:review",
+    "before:deliver"
+  ],
+  "points": [
+    "sdlc.workflow",
+    "card.section"
+  ],
+  "activation": [],
+  "settings": [
+    ["stages", "enum[]", "inbox, prepare, doing, review, deliver, verify, close"],
+    ["requireSections", "bool", "true"],
+    ["autoAdvanceVerify", "bool", "true"]
+  ],
+  "main": "index.js"
+}

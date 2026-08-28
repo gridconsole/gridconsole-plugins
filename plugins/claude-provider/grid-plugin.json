@@ -1,0 +1,32 @@
+{
+  "id": "claude-provider",
+  "name": "claude-provider",
+  "version": "0.1.0",
+  "apiVersion": ">=0.1",
+  "publisher": "grid console",
+  "description": "Sessions through Claude Code, and the /prepare, /build and /self-review commands the default SDLC calls.",
+  "permissions": {
+    "network": [],
+    "cardWrite": false,
+    "filesystem": [],
+    "shell": false
+  },
+  "hooks": [],
+  "points": [
+    "agent.provider",
+    "llm.provider"
+  ],
+  "activation": [],
+  "settings": [
+    ["commands.prepare", "string", "claude /prepare {card.md}"],
+    ["commands.build", "string", "claude /build {card.md} --plan {plan.md}"],
+    ["commands.review", "string", "claude /self-review {diff}"],
+    ["prompts.prepare", "prompt", ".claude/commands/prepare.md · edit"],
+    ["prompts.build", "prompt", ".claude/commands/build.md · edit"],
+    ["prompts.review", "prompt", ".claude/commands/self-review.md · edit"],
+    ["defaultModel", "enum", "sonnet"],
+    ["mcp.servers", "page", "4 configured → Settings › MCP servers"],
+    ["skills", "page", "6 installed → Settings › Skills"]
+  ],
+  "main": "index.js"
+}

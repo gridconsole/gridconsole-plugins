@@ -1,0 +1,16 @@
+{
+  "name": "@gridconsole/plugin",
+  "version": "0.1.0",
+  "description": "Types and test helpers for Grid Console plugins",
+  "license": "Apache-2.0",
+  "main": "index.js",
+  "types": "types.d.ts",
+  "files": [
+    "index.js",
+    "types.d.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test *.test.js"
+  }
+}
