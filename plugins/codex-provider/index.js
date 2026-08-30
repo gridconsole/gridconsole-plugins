@@ -91,7 +91,9 @@ Record what shipped under "### Delivery" in the card's "## Review" section: the 
 
 Starting the app, restarting a service and exercising the feature are all authorized — do them rather than asking whether you should.
 
-Record the outcome under "### Verification" in the card's "## Review" section: pass or fail, plus one line of the evidence you actually saw. Only on pass move the card on as the pipeline protocol says. On failure keep it in verify, put the failure under "### Needs your eyes", and stop for the user to decide the next move.`,
+A step this machine cannot run at all — driving a browser with no Claude in Chrome pairing is the usual one — is SKIPPED. A skip is neither a pass nor a failure: verify everything that does not need it, record the step that did not run on its own line as \`browser: skipped\` with the reason, and never fold it into a pass.
+
+Record the outcome under "### Verification" in the card's "## Review" section: pass, fail or skipped per step, plus one line of the evidence you actually saw. Only when nothing failed do you move the card on as the pipeline protocol says. On failure keep it in verify, put the failure under "### Needs your eyes", and stop for the user to decide the next move. A skip on its own is not a failure and does not hold the card.`,
   },
 ];
 
