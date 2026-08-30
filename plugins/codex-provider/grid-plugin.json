@@ -1,0 +1,33 @@
+{
+  "id": "codex-provider",
+  "name": "codex-provider",
+  "version": "0.1.0",
+  "apiVersion": ">=0.1",
+  "publisher": "grid console",
+  "description": "Sessions through Codex CLI, and prepare, build and self-review prompts for the default SDLC.",
+  "permissions": {
+    "network": [],
+    "cardWrite": false,
+    "filesystem": [],
+    "shell": false
+  },
+  "hooks": [],
+  "points": [
+    "agent.provider",
+    "llm.provider"
+  ],
+  "activation": [],
+  "configuration": {
+    "commands.prepare": {"type": "string", "title": "Prepare command", "default": "codex exec --sandbox workspace-write - < {card.md}"},
+    "commands.build": {"type": "string", "title": "Build command", "default": "codex exec --sandbox workspace-write - < {plan.md}"},
+    "commands.review": {"type": "string", "title": "Self-review command", "default": "codex review --uncommitted"},
+    "prompts.prepare": {"type": "prompt", "title": "Prepare prompt", "default": ".codex/prompts/prepare.md"},
+    "prompts.build": {"type": "prompt", "title": "Build prompt", "default": ".codex/prompts/build.md"},
+    "prompts.review": {"type": "prompt", "title": "Self-review prompt", "default": ".codex/prompts/self-review.md"},
+    "defaultModel": {"type": "string", "title": "Default model", "default": ""},
+    "sandbox": {"type": "enum", "title": "Sandbox", "default": "workspace-write", "options": ["read-only", "workspace-write", "danger-full-access"]},
+    "mcp.servers": {"type": "page", "title": "MCP servers", "default": "Settings › MCP servers"},
+    "skills": {"type": "page", "title": "Skills", "default": "Settings › Skills"}
+  },
+  "main": "index.js"
+}

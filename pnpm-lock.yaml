@@ -20,6 +20,8 @@ importers:
 
   plugins/claude-provider: {}
 
+  plugins/codex-provider: {}
+
   plugins/github-deliver: {}
 
   plugins/grid-explain: {}

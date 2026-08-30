@@ -15,7 +15,7 @@ loaded through the same contract third-party plugins will use.
   around.
 - `plugins/` — the bundled, first-party plugins, one directory per plugin, each
   with a `grid-plugin.json` manifest and an entry point:
-  `grid-sdlc-default`, `claude-provider`, `github-deliver`, `grid-themes`,
+  `grid-sdlc-default`, `claude-provider`, `codex-provider`, `github-deliver`, `grid-themes`,
   `grid-explain`, `grid-usage`, `grid-redact`.
 
 ## Status

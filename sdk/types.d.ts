@@ -260,6 +260,29 @@ export interface AgentProviderPayload {
   name: string;
   bin: string;
   commands: AgentCommand[];
+  /** Optional features exposed by providers with an automation-friendly CLI. */
+  capabilities?: {
+    nonInteractive?: boolean;
+    jsonl?: boolean;
+    resume?: boolean;
+    chat?: 'stable' | 'experimental' | false;
+    terminal?: boolean;
+  };
+  /** Declarative argv templates; the host remains responsible for spawning. */
+  invocation?: {
+    run: string[];
+    resume?: string[];
+  };
+  /** Optional interactive transport metadata for a native provider UI. */
+  interactive?: {
+    mode?: 'terminal' | 'chat';
+    approvalPolicy?: 'on-request' | 'never';
+    autoApprove?: boolean;
+    protocol: string;
+    server?: string[];
+    tui?: string[];
+    items?: string[];
+  };
 }
 
 /** `deliver.target` — what Deliver means: PR, MR, push, patch. */
