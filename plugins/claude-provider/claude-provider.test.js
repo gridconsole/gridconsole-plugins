@@ -30,12 +30,12 @@ test('manifest parses and matches the design roster', () => {
   // value type here (grid-redact stores its rules file in one), and reusing it
   // would have made a read-only pointer look editable.
   assert.deepStrictEqual(manifest.configuration, {
-    "prompts.prepare": {"type": "prompt", "title": "Prepare prompt", "default": "Settings › Commands"},
-    "prompts.start": {"type": "prompt", "title": "Start prompt (no prepare stage)", "default": "Settings › Commands"},
-    "prompts.build": {"type": "prompt", "title": "Build prompt", "default": "Settings › Commands"},
-    "prompts.review": {"type": "prompt", "title": "Self-review prompt", "default": "Settings › Commands"},
-    "prompts.deliver": {"type": "prompt", "title": "Deliver prompt", "default": "Settings › Commands"},
-    "prompts.verify": {"type": "prompt", "title": "Verify prompt", "default": "Settings › Commands"},
+    "prompts.prepare": {"type": "prompt", "title": "Prepare prompt", "default": "Settings › SDLC"},
+    "prompts.start": {"type": "prompt", "title": "Start prompt (no prepare stage)", "default": "Settings › SDLC"},
+    "prompts.build": {"type": "prompt", "title": "Build prompt", "default": "Settings › SDLC"},
+    "prompts.review": {"type": "prompt", "title": "Self-review prompt", "default": "Settings › SDLC"},
+    "prompts.deliver": {"type": "prompt", "title": "Deliver prompt", "default": "Settings › SDLC"},
+    "prompts.verify": {"type": "prompt", "title": "Verify prompt", "default": "Settings › SDLC"},
     "defaultModel": {"type": "enum", "title": "Default model", "default": "sonnet", "options": ["fable", "opus", "sonnet", "haiku"]},
     "mcpConfig": {"type": "file", "title": "MCP servers", "default": ".mcp.json"},
     "skillsDir": {"type": "file", "title": "Skills", "default": ".claude/skills"}

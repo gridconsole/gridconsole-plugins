@@ -5,7 +5,7 @@
 // and the wording its sessions are started with.
 
 // One entry per stage where Grid starts or resumes an agent. The host's
-// precedence is a workspace edit in Settings › Commands, then `file` if it
+// precedence is a workspace edit in Settings › SDLC, then `file` if it
 // exists on disk, then `default` — so shipping better wording here reaches
 // every workspace that has not deliberately changed it. Grid never writes
 // these files. See ide/engine/stageprompts.js.

@@ -12,7 +12,7 @@
 //
 // One entry per stage where Grid starts or resumes an agent. `default` is the
 // shipped text; `file` is the workspace-relative path a user may keep their own
-// copy at. The host's precedence is: a workspace edit in Settings › Commands,
+// copy at. The host's precedence is: a workspace edit in Settings › SDLC,
 // then that file if it exists, then this default — so shipping better wording
 // here reaches every workspace that has not deliberately changed it. Grid never
 // writes these files. See ide/engine/stageprompts.js.

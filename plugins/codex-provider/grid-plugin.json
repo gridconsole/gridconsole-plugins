@@ -18,12 +18,12 @@
   ],
   "activation": [],
   "configuration": {
-    "prompts.prepare": {"type": "prompt", "title": "Prepare prompt", "default": "Settings › Commands"},
-    "prompts.start": {"type": "prompt", "title": "Start prompt (no prepare stage)", "default": "Settings › Commands"},
-    "prompts.build": {"type": "prompt", "title": "Build prompt", "default": "Settings › Commands"},
-    "prompts.review": {"type": "prompt", "title": "Self-review prompt", "default": "Settings › Commands"},
-    "prompts.deliver": {"type": "prompt", "title": "Deliver prompt", "default": "Settings › Commands"},
-    "prompts.verify": {"type": "prompt", "title": "Verify prompt", "default": "Settings › Commands"},
+    "prompts.prepare": {"type": "prompt", "title": "Prepare prompt", "default": "Settings › SDLC"},
+    "prompts.start": {"type": "prompt", "title": "Start prompt (no prepare stage)", "default": "Settings › SDLC"},
+    "prompts.build": {"type": "prompt", "title": "Build prompt", "default": "Settings › SDLC"},
+    "prompts.review": {"type": "prompt", "title": "Self-review prompt", "default": "Settings › SDLC"},
+    "prompts.deliver": {"type": "prompt", "title": "Deliver prompt", "default": "Settings › SDLC"},
+    "prompts.verify": {"type": "prompt", "title": "Verify prompt", "default": "Settings › SDLC"},
     "defaultModel": {"type": "string", "title": "Default model", "default": ""},
     "sandbox": {"type": "enum", "title": "Sandbox", "default": "workspace-write", "options": ["read-only", "workspace-write", "danger-full-access"]},
     "mcpConfig": {"type": "file", "title": "MCP servers", "default": ".codex/config.toml"}
