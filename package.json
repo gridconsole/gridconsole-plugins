@@ -10,7 +10,7 @@
   "packageManager": "pnpm@10.26.1",
   "scripts": {
     "lint": "eslint .",
-    "test": "pnpm -r --if-present test"
+    "test": "pnpm -r --no-bail --if-present test"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

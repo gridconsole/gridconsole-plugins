@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "apiVersion": ">=0.1",
   "publisher": "grid console",
-  "description": "Sessions through Codex CLI, and prepare, build and self-review prompts for the default SDLC.",
+  "description": "Sessions through Codex CLI, and the stage prompts the default SDLC sends when it starts or resumes one.",
   "permissions": {
     "network": [],
     "cardWrite": false,
@@ -18,16 +18,15 @@
   ],
   "activation": [],
   "configuration": {
-    "commands.prepare": {"type": "string", "title": "Prepare command", "default": "codex exec --sandbox workspace-write - < {card.md}"},
-    "commands.build": {"type": "string", "title": "Build command", "default": "codex exec --sandbox workspace-write - < {plan.md}"},
-    "commands.review": {"type": "string", "title": "Self-review command", "default": "codex review --uncommitted"},
-    "prompts.prepare": {"type": "prompt", "title": "Prepare prompt", "default": ".codex/prompts/prepare.md"},
-    "prompts.build": {"type": "prompt", "title": "Build prompt", "default": ".codex/prompts/build.md"},
-    "prompts.review": {"type": "prompt", "title": "Self-review prompt", "default": ".codex/prompts/self-review.md"},
+    "prompts.prepare": {"type": "prompt", "title": "Prepare prompt", "default": "Settings › Commands"},
+    "prompts.start": {"type": "prompt", "title": "Start prompt (no prepare stage)", "default": "Settings › Commands"},
+    "prompts.build": {"type": "prompt", "title": "Build prompt", "default": "Settings › Commands"},
+    "prompts.review": {"type": "prompt", "title": "Self-review prompt", "default": "Settings › Commands"},
+    "prompts.deliver": {"type": "prompt", "title": "Deliver prompt", "default": "Settings › Commands"},
+    "prompts.verify": {"type": "prompt", "title": "Verify prompt", "default": "Settings › Commands"},
     "defaultModel": {"type": "string", "title": "Default model", "default": ""},
     "sandbox": {"type": "enum", "title": "Sandbox", "default": "workspace-write", "options": ["read-only", "workspace-write", "danger-full-access"]},
-    "mcp.servers": {"type": "page", "title": "MCP servers", "default": "Settings › MCP servers"},
-    "skills": {"type": "page", "title": "Skills", "default": "Settings › Skills"}
+    "mcpConfig": {"type": "file", "title": "MCP servers", "default": ".codex/config.toml"}
   },
   "main": "index.js"
 }
