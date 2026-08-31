@@ -5,6 +5,10 @@
   "apiVersion": ">=0.1",
   "publisher": "grid console",
   "description": "Sessions through Codex CLI, and the stage prompts the default SDLC sends when it starts or resumes one.",
+  "stability": {
+    "level": "unstable",
+    "note": "Its stage prompts have had far less real use than the Claude provider's — one of them told the agent to verify 'end-to-end for real' where the design and the Claude provider say 'in the real UI', corrected on 2026-08-31."
+  },
   "permissions": {
     "network": [],
     "cardWrite": false,
