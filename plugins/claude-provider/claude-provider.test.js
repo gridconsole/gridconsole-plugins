@@ -98,3 +98,91 @@ test('the prepare prompt keeps Claude’s approval gate and its picker', () => {
   assert.match(prepare.default, /Ready to build/);
   assert.match(prepare.default, /Do not start building until it is approved/);
 });
+
+// --- the 2026-08-30 rewrite, pinned -----------------------------------------
+//
+// These five strings are the first message every Claude session in every
+// workspace receives, and an untouched prompt is not an override — so shipping
+// them here IS the delivery. Until now nothing pinned a word of them, and a
+// botched paste would have gone out silently. What is asserted below is the
+// part that is a CONTRACT: the sections other code, other stages or a person
+// expects to find on the card. Prose is left free to be edited.
+
+const at = (stage) => plugin.PROMPTS.find((s) => s.stage === stage).default;
+
+test('prepare asks for the seven plan sections, the task-list format and the questions log', () => {
+  const prepare = at('prepare');
+  for (const s of ['### Summary', '### What I will change', '### How I will know it works',
+    '### Requires your attention', '### Expected files I will touch', '### Related cards',
+    '### List of tasks']) {
+    assert.ok(prepare.includes(`"${s}"`), `prepare no longer asks for ${s}`);
+  }
+  // The list Grid parses for board progress: one checkbox per line, no nesting.
+  assert.match(prepare, /one markdown checkbox per line/);
+  assert.match(prepare, /- \[ \]/);
+  assert.match(prepare, /no sub-bullets/);
+  // Every question and its answer land on the card, not only in the transcript.
+  assert.ok(prepare.includes('"### Questions asked"'));
+});
+
+test('build pins the task-list discipline the board reads', () => {
+  const build = at('build');
+  assert.match(build, /Work the approved task list in order/);
+  assert.match(build, /- \[x\]/);
+  assert.match(build, /never tick ahead/);
+  assert.match(build, /The list is fixed at approval/);
+  assert.ok(build.includes('"## Review"'));
+});
+
+// The three subsections the review prompt names are the ones review.js parses
+// and the ones the operator reads first. The two the gate ALSO requires —
+// "### Files touched" and "### Branch" — are deliberately not here: they arrive
+// from core's carry list at the augment() seam, and asserting them in this file
+// would hide the fact that this prompt on its own does not satisfy the gate.
+// core's ide/engine/stageprompts.test.js is where that pairing is proven.
+test('review names the three subsections the card is judged on', () => {
+  const review = at('review');
+  for (const s of ['### What changed', '### Assumptions', '### Needs your eyes']) {
+    assert.ok(review.includes(`"${s}"`), `review no longer names ${s}`);
+  }
+  assert.match(review, /\[critical\][\s\S]*\[important\][\s\S]*\[minor\]/);
+  assert.match(review, /do not restart the work and do not move the card/);
+});
+
+// A red pipeline and a failed verification used to end the same way: set the
+// card back, write it under "### Needs your eyes", stop. They now stop ON the
+// stage and ask. The escalation is the behaviour; the heading is what makes it
+// findable afterwards.
+test('deliver and verify stop on their own stage and ask, under their own headings', () => {
+  const deliver = at('deliver');
+  assert.ok(deliver.includes('"### Delivery failed"'));
+  assert.match(deliver, /do not move the card/);
+  assert.match(deliver, /AskUserQuestion/);
+  assert.ok(!deliver.includes('set the card back to review'), 'the old escalation is still shipping');
+
+  const verify = at('verify');
+  assert.ok(verify.includes('"### Verification failed"'));
+  assert.match(verify, /keep it in verify/);
+  assert.match(verify, /AskUserQuestion/);
+});
+
+// The skip ruling is NEWER than the design export, whose DELIVER>VERIFY knows
+// only pass and fail. Transcribing that string wholesale would have reverted it.
+test('the rewrite did not take the skip outcome back out of verify', () => {
+  const verify = at('verify');
+  assert.match(verify, /is SKIPPED/);
+  assert.match(verify, /A skip is neither a pass nor a failure/);
+  assert.match(verify, /A skip on its own is not a failure and does not hold the card/);
+  assert.match(verify, /pass, fail or skipped per step/);
+  // "Only on pass" — the export's wording — would hold every skipped card.
+  assert.ok(!/Only on pass/.test(verify), 'the export sentence contradicts the skip ruling');
+});
+
+// The design's rail has five arrows and no entry for `start`, so the rewrite
+// supplies no text for it. A research or chore card still has to start.
+test('start is untouched by the rewrite and still reachable', () => {
+  const start = at('start');
+  assert.match(start, /your type has no prepare stage/);
+  assert.strictEqual(plugin.PROMPTS.filter((s) => s.stage === 'start').length, 1);
+  assert.ok(start.trim().length > 80);
+});

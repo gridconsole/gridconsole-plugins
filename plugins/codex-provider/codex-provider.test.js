@@ -83,3 +83,74 @@ test('the prepare prompt keeps the approval gate without the picker', () => {
   assert.match(prepare.default, /ready to build/i);
   assert.match(prepare.default, /do not start building before it is answered/i);
 });
+
+// --- the 2026-08-30 rewrite, in Codex's voice --------------------------------
+//
+// The design ships ONE prompt table and this provider is the second voice, so
+// what is pinned here is the half that must be the same on both: the card
+// sections. Every one of these is a contract another stage, another module or a
+// person depends on, and Codex has to produce the identical card — an operator
+// cannot be reading a different document because of which agent ran.
+
+const at = (stage) => plugin.PROMPTS.find((s) => s.stage === stage).default;
+
+test('prepare asks for the same seven plan sections Claude asks for', () => {
+  const prepare = at('prepare');
+  for (const s of ['### Summary', '### What I will change', '### How I will know it works',
+    '### Requires your attention', '### Expected files I will touch', '### Related cards',
+    '### List of tasks']) {
+    assert.ok(prepare.includes(`"${s}"`), `prepare no longer asks for ${s}`);
+  }
+  assert.match(prepare, /one markdown checkbox per line/);
+  assert.match(prepare, /- \[ \]/);
+  assert.ok(prepare.includes('"### Questions asked"'));
+  // The picker paragraph is the one that had to be rewritten: a question here
+  // is a message, not a tool call.
+  assert.match(prepare, /Ask clarifying questions in the conversation/);
+});
+
+test('build pins the task-list discipline the board reads', () => {
+  const build = at('build');
+  assert.match(build, /Work the approved task list in order/);
+  assert.match(build, /- \[x\]/);
+  assert.match(build, /never tick ahead/);
+  assert.match(build, /The list is fixed at approval/);
+  assert.ok(build.includes('"## Review"'));
+});
+
+test('review names the three subsections the card is judged on', () => {
+  const review = at('review');
+  for (const s of ['### What changed', '### Assumptions', '### Needs your eyes']) {
+    assert.ok(review.includes(`"${s}"`), `review no longer names ${s}`);
+  }
+  assert.match(review, /\[critical\][\s\S]*\[important\][\s\S]*\[minor\]/);
+});
+
+test('deliver and verify stop on their own stage and ask, under their own headings', () => {
+  const deliver = at('deliver');
+  assert.ok(deliver.includes('"### Delivery failed"'));
+  assert.match(deliver, /do not move the card/);
+  assert.match(deliver, /ask the user in the conversation/);
+  assert.ok(!deliver.includes('set the card back to review'), 'the old escalation is still shipping');
+
+  const verify = at('verify');
+  assert.ok(verify.includes('"### Verification failed"'));
+  assert.match(verify, /keep it in verify/);
+  assert.match(verify, /ask the user in the conversation/);
+});
+
+test('the rewrite did not take the skip outcome back out of verify', () => {
+  const verify = at('verify');
+  assert.match(verify, /is SKIPPED/);
+  assert.match(verify, /A skip is neither a pass nor a failure/);
+  assert.match(verify, /A skip on its own is not a failure and does not hold the card/);
+  assert.match(verify, /pass, fail or skipped per step/);
+  assert.ok(!/Only on pass/.test(verify), 'the export sentence contradicts the skip ruling');
+});
+
+test('start is untouched by the rewrite and still reachable', () => {
+  const start = at('start');
+  assert.match(start, /your type has no prepare stage/);
+  assert.strictEqual(plugin.PROMPTS.filter((s) => s.stage === 'start').length, 1);
+  assert.ok(start.trim().length > 80);
+});
