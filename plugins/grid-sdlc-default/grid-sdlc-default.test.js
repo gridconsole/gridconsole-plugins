@@ -209,6 +209,60 @@ test('subsections are matched at any depth, case-insensitively, with suffixes', 
   assert.strictEqual(gate(body).kind, 'pass');
 });
 
+// --- and the same heading rules core's review.js parses by -------------------
+//
+// This gate says whether a card may enter review; core's parser says what the
+// review panel then draws. A heading only one of them accepts produces a card
+// that passes the contract and renders blank, or a refusal the card visibly
+// satisfies. These four are the places the two used to read a heading
+// differently, pinned here so they cannot drift apart again.
+
+test('an en-dashed Review heading counts, like the em-dashed one', () => {
+  // One keystroke apart, and agents write both. Core accepted both; this gate
+  // accepted only the em dash, so "## Review – round 2" was refused as having
+  // no Review section at all on a card whose panel rendered it perfectly.
+  assert.strictEqual(gate(FULL.replace('## Review', '## Review – round 2')).kind, 'pass');
+});
+
+test('a CRLF card is read exactly like an LF one', () => {
+  const crlf = (s) => s.replace(/\n/g, '\r\n');
+  assert.strictEqual(gate(crlf(FULL)).kind, 'pass');
+  const short = FULL.replace('### Branch\nmain\n', '');
+  assert.strictEqual(gate(crlf(short)).reason, gate(short).reason,
+    'the same card blocks for the same reason with either line ending');
+});
+
+test('a fenced example of the contract does not satisfy the contract', () => {
+  // A card that documents what to write quotes these headings inside a fence.
+  // Counted as real, the gate passes a card with no review on it — and core's
+  // parser, which skips fences, then draws an empty panel.
+  const doc = ['Write it like this:', '', '```markdown', FULL.trim(), '```', ''].join('\n');
+  const v = gate(doc);
+  assert.strictEqual(v.kind, 'block');
+  assert.strictEqual(v.reason, 'Review contract: no "## Review" section');
+  // The same card with a real review under the example passes.
+  assert.strictEqual(gate(`${doc}\n${FULL}`).kind, 'pass');
+  // An unterminated fence is prose, not a fence: one stray backtick run must
+  // not refuse a card that is completely filled in.
+  assert.strictEqual(gate(`${FULL}\n\`\`\`\nnote to self\n`).kind, 'pass');
+});
+
+test('a suffix needs a separator — a bare word makes a different heading', () => {
+  // "### What changed later" used to satisfy "What changed" here while core read
+  // it as neither, because core has to keep "### Delivery failed" distinct from
+  // "### Delivery". The gate must not accept a heading the panel will not read.
+  const body = FULL.replace('### What changed', '### What changed later');
+  const v = gate(body);
+  assert.strictEqual(v.kind, 'block');
+  assert.strictEqual(v.reason, 'Review contract: missing What changed');
+  // The separator forms all still count, at any depth.
+  for (const head of [
+    '### What changed — since the plan', '### What changed – since the plan',
+    '#### What changed · round 2', '## What changed (round 2)',
+    '### What changed: round 2', '### What changed - round 2',
+  ]) assert.strictEqual(gate(FULL.replace('### What changed', head)).kind, 'pass', head);
+});
+
 // The two hosts hand the content over differently: a sandboxed plugin gets it
 // on the card, an in-process one at the top level. A gate that read only one
 // would refuse every card under the other, so both shapes are pinned here

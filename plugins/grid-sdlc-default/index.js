@@ -26,11 +26,62 @@ const STAGES = [
 // cards to what they were asked for, not to what the brochure says.
 const REVIEW_SECTIONS = ['Needs your eyes', 'Assumptions', 'What changed', 'Files touched', 'Branch'];
 
+// THIS GATE AND CORE'S PARSER MUST AGREE ABOUT WHAT A HEADING IS.
+//
+// The gate decides whether a card may enter review; core's review.js decides
+// what the review panel then draws. Wherever the two read a heading differently
+// the product tells the user two things at once, and both of the ways they can
+// disagree are bad. A heading the gate accepts and the parser does not means the
+// card sails through the contract check into a panel that renders it blank; a
+// heading the parser accepts and the gate does not means a refusal the card
+// visibly satisfies. Every rule below is therefore the same rule as core's, and
+// changing one without the other re-opens that seam.
+//
 // `## Review`, and the suffixed forms people really write: "## Review · 2026-08-24",
 // "## Review (round 2)", "## Review — the alpha cut". The separator is required
 // so this does not match a prose heading that merely starts with the word, e.g.
-// '## Review sections + "Approve review" = POST /api/card/approve'.
-const REVIEW_HEAD = /^##[ \t]+Review[ \t]*(?:[—·(:-][^\n]*)?$/im;
+// '## Review sections + "Approve review" = POST /api/card/approve'. The set
+// includes BOTH dashes: an em dash and an en dash are one keystroke apart and
+// agents write both, and core accepts both.
+const SEPARATOR = /^[—–·(:-]/;
+const REVIEW_HEAD = /^##[ \t]+Review[ \t]*(?:[—–·(:-][^\n]*)?$/im;
+
+// A ```-fenced region is a PICTURE of the contract, not the contract.
+//
+// A card that documents what an agent must write quotes these exact headings
+// inside a fence, and a matcher that cannot see the fence reads the example as
+// the real thing: the gate then passes a card whose only "## Review" is a
+// worked example, and the panel — core's review.js skips fences — draws nothing.
+//
+// Masking keeps the string's length and every newline where they were, so the
+// line-anchored patterns above and below behave identically on the masked copy.
+// An unterminated fence is deliberately left as prose, the same call core makes:
+// mis-skipping would let one stray backtick run refuse a fully written card.
+//
+// This is a deliberate second copy of core's review.js `maskFences`. A plugin is
+// sandboxed and cannot import from the engine, and the alternative — the two
+// matchers reading fences differently — is the exact class of defect this whole
+// block exists to prevent. They move together.
+function maskFences(text) {
+  const lines = text.split('\n');
+  const out = lines.slice();
+  let open = null; // { char, len, line } of the fence we are inside
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(lines[i]);
+    if (!m) continue;
+    if (open) {
+      // A closing fence is the same character, at least as long, and bare.
+      if (m[1][0] !== open.char || m[1].length < open.len || m[2].trim() !== '') continue;
+      for (let j = open.line; j <= i; j++) out[j] = ' '.repeat(lines[j].length);
+      open = null;
+      continue;
+    }
+    // A ```-fence's info string cannot itself contain a backtick.
+    if (m[1][0] === '`' && m[2].includes('`')) continue;
+    open = { char: m[1][0], len: m[1].length, line: i };
+  }
+  return out.join('\n');
+}
 
 /** The section headings a body carries, at any depth. Case-insensitive, and
  *  ## / ### agnostic: real cards use both, and core's own corpus writes
@@ -48,15 +99,24 @@ function headings(body) {
  * Exported so the gate's behavior is testable without a ctx or a file.
  */
 function missingReviewSections(body) {
-  const text = String(body || '');
+  // Line endings first, because everything below is line-anchored and core's
+  // parser normalises the same way. A CRLF card used to pass this gate and then
+  // return null from parseReview — a contract check waving a card through to a
+  // panel that could not read a single heading on it.
+  const text = maskFences(String(body || '').replace(/\r\n?/g, '\n'));
   if (!REVIEW_HEAD.test(text)) return ['Review'];
   const have = headings(text);
   return REVIEW_SECTIONS.filter((name) => {
     const want = name.toLowerCase();
-    // A suffix after the heading is fine here too ("### Branch — main").
     for (const h of have) {
-      if (h === want || h.startsWith(`${want} `) || h.startsWith(`${want}\t`)) return false;
-      if (h.startsWith(want) && /^[—·(:-]/.test(h.slice(want.length).trim())) return false;
+      if (h === want) return false;
+      // A suffix after the heading is fine ("### Branch — main"), but it must be
+      // introduced by a separator. This used to accept a bare space and any
+      // words after it, which made "### What changed later" satisfy "What
+      // changed" here while core's parser — which has to keep "### Delivery
+      // failed" distinct from "### Delivery" — read it as neither. The gate must
+      // not accept a heading the panel will not render.
+      if (h.startsWith(want) && SEPARATOR.test(h.slice(want.length).trim())) return false;
     }
     return true;
   });
