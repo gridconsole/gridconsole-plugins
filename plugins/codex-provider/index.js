@@ -117,7 +117,7 @@ Record what shipped under "### Delivery" in the card's "## Review" section: the 
     name: '/verify',
     title: 'Verify',
     file: '.codex/prompts/verify.md',
-    usedBy: 'deliver -> closed',
+    usedBy: 'deliver -> verify',
     default: `Verify this card per the verify stage in your session context. Verifying means proving the change works where it runs: restart the affected service or app so it picks up the change, then drive the changed feature end-to-end for real. Tests alone do not count. Run the thread verification command when one is configured.
 
 Starting the app, restarting a service and exercising the feature are all authorized — do them rather than asking whether you should.

@@ -79,6 +79,26 @@ test('every stage prompt carries a file path, an arrow and shipped text', () => 
   }
 });
 
+// The arrow the host draws this prompt on, and the arrow this string names, are
+// the same arrow. Since the 2026-08-30 IA the stage prompt is edited on the SDLC
+// RAIL, with `usedBy` printed as a footer under the box — so a row whose arrow
+// disagrees with the arrow the operator clicked puts two answers on one screen.
+// The host keys prompts by the stage a session STARTS in (stageprompts.stageFor),
+// which is the arrow's TO stage for every prompted arrow.
+test('usedBy names the arrow the host really draws this prompt on', () => {
+  const ARROW = {
+    prepare: 'inbox -> prepare',
+    start: 'inbox -> doing',
+    build: 'prepare -> doing',
+    review: 'doing -> review',
+    deliver: 'review -> deliver',
+    verify: 'deliver -> verify',
+  };
+  for (const entry of plugin.PROMPTS) {
+    assert.strictEqual(entry.usedBy, ARROW[entry.stage], `${entry.stage} usedBy`);
+  }
+});
+
 // Every stage the host can start a session in has to resolve to something, and
 // a manifest row without a contribution (or the reverse) is a prompt the
 // Settings page would draw with nothing behind it.

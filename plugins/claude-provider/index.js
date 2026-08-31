@@ -120,7 +120,7 @@ Record what shipped under "### Delivery" in the card's "## Review" section: the 
     name: '/verify',
     title: 'Verify',
     file: '.claude/commands/verify.md',
-    usedBy: 'deliver -> closed',
+    usedBy: 'deliver -> verify',
     default: `Verify this card per the verify stage in your session context. Verifying means proving the change works where it runs: restart the affected service or app so it picks up the change, then drive the changed feature end-to-end in the real UI. Tests alone do not count. Run the thread verification command when one is configured.
 
 A step this machine cannot run at all — driving a browser with no Claude in Chrome pairing is the usual one — is SKIPPED. A skip is neither a pass nor a failure: verify everything that does not need it, record the step that did not run on its own line as \`browser: skipped\` with the reason, and never fold it into a pass.
