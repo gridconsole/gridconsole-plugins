@@ -168,9 +168,18 @@ test('the rewrite did not take the skip outcome back out of verify', () => {
   assert.ok(!/Only on pass/.test(verify), 'the export sentence contradicts the skip ruling');
 });
 
-test('start is untouched by the rewrite and still reachable', () => {
+// Since the 2026-08-30 ruling this text is also what a plan-less card gets when
+// it is PICKED BACK UP in doing (stageprompts.stageFor reads `refines` there
+// too), so one string serves the beginning and the resume and has to be true of
+// both: no promised plan, and no reading as a fresh start.
+test('start speaks for a card with no plan, whether it is beginning or resuming', () => {
   const start = at('start');
   assert.match(start, /your type has no prepare stage/);
+  assert.match(start, /no approved task list/);
+  assert.match(start, /picked back up/);
+  assert.match(start, /Carry on from there rather than starting again/);
+  assert.ok(!/approved task list in order/.test(start),
+    'start must never carry the build prompt’s language about a list it has no approval for');
   assert.strictEqual(plugin.PROMPTS.filter((s) => s.stage === 'start').length, 1);
   assert.ok(start.trim().length > 80);
 });

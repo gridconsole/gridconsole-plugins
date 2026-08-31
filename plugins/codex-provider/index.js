@@ -60,9 +60,11 @@ When the plan is written, ask once whether it is ready to build, and wait. That 
     title: 'Start (no prepare stage)',
     file: '.codex/prompts/start.md',
     usedBy: 'inbox -> doing',
-    default: `Start this card per the pipeline protocol in your session context — your type has no prepare stage, so there is no plan to write and no approval to wait for.
+    default: `Work this card per the pipeline protocol in your session context — your type has no prepare stage, so there is no plan to follow, no approved task list, and no approval to wait for.
 
-Read the card, investigate, do the work, and write what you find into the card body as you go. You are already authorized to run commands and edit files in this workspace; work straight through rather than checking in for permission.
+You are sent this message when the card starts and again whenever it is picked back up, so read the card first, including anything you already wrote into it: the card body is the only record of how far the work got. Carry on from there rather than starting again.
+
+Investigate, do the work, and write what you find into the card body as you go. You are already authorized to run commands and edit files in this workspace; work straight through rather than checking in for permission.
 
 Ask the user only when a real choice comes up that would change the outcome. When the work is done, write the "## Review" section the protocol describes and move the card to the state it names.`,
   },

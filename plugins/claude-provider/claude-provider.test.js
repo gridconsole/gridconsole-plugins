@@ -199,10 +199,20 @@ test('the rewrite did not take the skip outcome back out of verify', () => {
 });
 
 // The design's rail has five arrows and no entry for `start`, so the rewrite
-// supplies no text for it. A research or chore card still has to start.
-test('start is untouched by the rewrite and still reachable', () => {
+// supplied no text for it. A card whose type walks no Prepare still has to
+// start — and since the 2026-08-30 ruling this is also the message it gets when
+// it is PICKED BACK UP in doing (stageprompts.stageFor reads `refines` there
+// too), because the build prompt talks about an approved task list that card
+// never had. One text now serves both, so it has to be true of both: it may not
+// promise a plan, and it may not read as a fresh beginning.
+test('start speaks for a card with no plan, whether it is beginning or resuming', () => {
   const start = at('start');
   assert.match(start, /your type has no prepare stage/);
+  assert.match(start, /no approved task list/);
+  assert.match(start, /picked back up/);
+  assert.match(start, /Carry on from there rather than starting again/);
+  assert.ok(!/approved task list in order/.test(start),
+    'start must never carry the build prompt’s language about a list it has no approval for');
   assert.strictEqual(plugin.PROMPTS.filter((s) => s.stage === 'start').length, 1);
   assert.ok(start.trim().length > 80);
 });
