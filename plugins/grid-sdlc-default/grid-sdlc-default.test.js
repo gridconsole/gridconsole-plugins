@@ -198,15 +198,55 @@ test('prose that merely starts with the word Review is not the section', () => {
   assert.strictEqual(v.reason, 'Review contract: no "## Review" section');
 });
 
-test('subsections are matched at any depth, case-insensitively, with suffixes', () => {
+test('subsections are matched case-insensitively, with suffixes, at ### depth', () => {
   const body = `## review
-## NEEDS YOUR EYES
-## assumptions
-#### What changed — since the plan
+### NEEDS YOUR EYES
+### assumptions
+### What changed — since the plan
 ### files touched
 ### Branch: main
 `;
   assert.strictEqual(gate(body).kind, 'pass');
+});
+
+// THE DEPTH THIS TEST USED TO ASSERT WAS THE BUG.
+//
+// It read "at any depth" and passed a card whose sections were written at `##`
+// and `####`, three lines under a comment saying the gate must not accept a
+// heading the panel will not read — which is exactly what it was doing. Neither
+// depth can ever render. `##` is the BLOCK level: it opens `## Review` and it
+// is what terminates it, so a `## What changed` does not sit inside the review
+// block, it ends it. `####` is structure inside a section — the `#### Rationale`
+// an agent writes halfway through `### What changed` — and core deliberately
+// treats it as part of that section's body rather than as a section of its own,
+// because promoting it would truncate every parent section at its first nested
+// subheading and drop the rest from the panel.
+//
+// Refusing them here is the honest half of the trade: the operator gets a
+// message naming the section to fix instead of a card that passed and then
+// rendered blank. Zero of the 23 reviewed cards on the real board write a
+// required subsection at `####`, and the three that write one at `##` are
+// already invisible in the panel today.
+test('## and #### are not review subsections — the panel cannot read either', () => {
+  const at = (depth) => `## Review
+${depth} Needs your eyes
+- **a** — b
+${depth} Assumptions
+- x
+${depth} What changed
+the work
+${depth} Files touched
+- a.js
+${depth} Branch
+main
+`;
+  assert.strictEqual(gate(at('###')).kind, 'pass');
+  for (const depth of ['##', '####']) {
+    const v = gate(at(depth));
+    assert.strictEqual(v.kind, 'block', depth);
+    assert.strictEqual(v.reason,
+      'Review contract: missing Needs your eyes, Assumptions, What changed, Files touched, Branch', depth);
+  }
 });
 
 // --- and the same heading rules core's review.js parses by -------------------
@@ -255,12 +295,81 @@ test('a suffix needs a separator — a bare word makes a different heading', () 
   const v = gate(body);
   assert.strictEqual(v.kind, 'block');
   assert.strictEqual(v.reason, 'Review contract: missing What changed');
-  // The separator forms all still count, at any depth.
+  // Every separator form counts, and all of them at `###`.
   for (const head of [
     '### What changed — since the plan', '### What changed – since the plan',
-    '#### What changed · round 2', '## What changed (round 2)',
+    '### What changed · round 2', '### What changed (round 2)',
     '### What changed: round 2', '### What changed - round 2',
   ]) assert.strictEqual(gate(FULL.replace('### What changed', head)).kind, 'pass', head);
+  // …and the same forms at a depth the panel cannot read are refused, which is
+  // the line the previous version of this test was on the wrong side of.
+  assert.strictEqual(gate(FULL.replace('### What changed', '#### What changed · round 2')).reason,
+    'Review contract: missing What changed');
+  // `##` costs more than the one section, and that is the clearest statement of
+  // why it cannot be a subsection: writing "## What changed" halfway down a
+  // review CLOSES the review block, so Files touched and Branch below it are
+  // outside it too. The panel has always drawn those three blank here; now the
+  // gate says so instead of waving the card through.
+  assert.strictEqual(gate(FULL.replace('### What changed', '## What changed (round 2)')).reason,
+    'Review contract: missing What changed, Files touched, Branch');
+});
+
+// THE SPACE BEFORE A SEPARATOR IS `[ \t]`, NOT "WHATEVER TRIM() STRIPS".
+//
+// This used to read `SEPARATOR.test(h.slice(want.length).trim())`, and JS
+// String.trim() strips every Unicode WhiteSpace and LineTerminator — twenty-two
+// code points more than the `[ \t]` core's SUFFIX allows. So the gate quietly
+// accepted a heading separated by a no-break space, and core read it as no
+// heading at all. These are not exotic: an NBSP is what a paste out of a
+// browser leaves behind, and several editors insert U+202F before punctuation
+// automatically. U+2028 and U+2029 broke it one level higher too, because the
+// gate matched with `/m` where those END a line and core's `[^\n]` says they do
+// not — so they could blank `## Review` itself.
+test('only a space or a tab may separate a heading from its suffix', () => {
+  const codes = [0x85, 0xa0, 0x0b, 0x0c, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003,
+    0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x2028, 0x2029,
+    0x202f, 0x205f, 0x3000, 0xfeff];
+  for (const code of codes) {
+    const ws = String.fromCharCode(code);
+    const label = `U+${code.toString(16).toUpperCase().padStart(4, '0')}`;
+    assert.strictEqual(gate(FULL.replace('### What changed', `### What changed${ws}— r2`)).reason,
+      'Review contract: missing What changed', `${label} before the suffix`);
+    assert.strictEqual(gate(FULL.replace('## Review', `## Review${ws}— r2`)).reason,
+      'Review contract: no "## Review" section', `${label} inside the ## Review heading`);
+  }
+  // The two that ARE allowed, on both levels.
+  for (const ws of [' ', '\t', ' \t ']) {
+    assert.strictEqual(gate(FULL.replace('### What changed', `### What changed${ws}— r2`)).kind, 'pass');
+    assert.strictEqual(gate(FULL.replace('## Review', `## Review${ws}— r2`)).kind, 'pass');
+  }
+});
+
+// THE GATE ASKS ABOUT THE REGION THE PANEL WILL READ, NOT ABOUT THE CARD.
+//
+// This scanned the whole body, and core has only ever parsed the LAST
+// `## Review` block. Every shape below therefore passed the contract check on
+// its way to a panel that was not looking there — the last one is the ordinary
+// case, a card sent back for a second round with the round-1 sections still
+// sitting above it.
+test('sections outside the last ## Review block do not satisfy the contract', () => {
+  const sections = `### Needs your eyes
+- **a** — b
+### Assumptions
+- x
+### What changed
+the work
+### Files touched
+- a.js
+### Branch
+main
+`;
+  const all = 'Review contract: missing Needs your eyes, Assumptions, What changed, Files touched, Branch';
+  assert.strictEqual(gate(`## Plan\n${sections}\n## Review\n`).reason, all, 'under ## Plan');
+  assert.strictEqual(gate(`## Review\n\n## Notes\n${sections}`).reason, all, 'below the review block');
+  assert.strictEqual(gate(`## Review · round 1\n${sections}\n## Review · round 2\nnothing yet\n`).reason,
+    all, 'only in the previous round');
+  // And the round that DOES carry them passes, wherever the earlier ones sit.
+  assert.strictEqual(gate(`## Review · round 1\nnothing yet\n\n## Review · round 2\n${sections}`).kind, 'pass');
 });
 
 // The two hosts hand the content over differently: a sandboxed plugin gets it
