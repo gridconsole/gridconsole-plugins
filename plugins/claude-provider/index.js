@@ -24,6 +24,15 @@
 // these stage names. Four of the five are byte-identical to it. `start` has no
 // arrow on the design's rail and therefore no entry in SDPROMPT; it keeps its
 // own wording because a research or chore card still starts somewhere.
+//
+// A CLOSING PARAGRAPH ADDED 2026-08-31 to prepare, review and deliver — the
+// only stages an agent can be exiting when the card crosses a HANDOFF ARROW
+// (server/handoff.js): Prepare -> Doing and any arrow into Verify replace the
+// agent, on every route, unconditionally now, instead of that depending on
+// worktree isolation or which button moved the card. Each paragraph says
+// plainly whether the agent finishing this stage is the one that continues —
+// review's is conditional, because whether its own exit hands off depends on
+// the thread's own delivery policy (deliver first, or straight to verify).
 const PROMPTS = [
   {
     stage: 'prepare',
@@ -35,18 +44,20 @@ const PROMPTS = [
 
 Ask clarifying questions with the AskUserQuestion tool — the picker renders here and is answered here, so ask whenever two readings of the card would lead to materially different work. Record every question and its answer in the card under "### Questions asked".
 
-Rewrite the card body, keeping the frontmatter intact, so it carries exactly these sections:
+Rewrite the card body, keeping the frontmatter intact, so it carries these sections, plus any Grid asks for further down this message:
 - "### Summary": what this card is, in two or three sentences a stranger could follow.
 - "### What I will change": the behaviour that will be different afterwards, not the files.
 - "### How I will know it works": the check that proves it, named concretely.
 - "### Requires your attention": anything the user must decide or accept. Empty is a good outcome.
 - "### Expected files I will touch": the files you expect to edit, and one line on anything shared.
 - "### Related cards": every open card this one depends on, blocks, follows up on, or shares files with. Closed cards do not belong here.
-- "### List of tasks": the ordered steps, in the format below. This becomes the agent task list in Doing.
+- "### List of tasks": the ordered steps, in the format below. Doing works from it.
 
-Write the task list as one markdown checkbox per line, in the order you will do them, each a single action with a verifiable end: "- [ ] Add the limiter middleware to the public router". Five to twelve is normal. Grid reads this list to show progress on the board, so no sub-bullets, no prose lines between them, and no step that means several unrelated things.
+Write the task list as one markdown checkbox per line, in the order you will do them, each a single action with a verifiable end: "- [ ] Add the limiter middleware to the public router". Five to twelve is normal. The Doing agent works this list top to bottom and ticks each line as it lands, so no sub-bullets, no prose lines between them, and no step that means several unrelated things.
 
-Then ask ONE final "Ready to build" question and wait. Do not start building until it is approved.`,
+Then ask ONE final "Ready to build" question and wait. Do not start building until it is approved.
+
+Approval hands this card to a fresh agent in Doing — not you, and not this conversation. The plan you wrote is the whole inheritance, so make sure it is everything the next agent needs.`,
   },
   {
     stage: 'start',
@@ -94,7 +105,9 @@ Read the card, its "## Review" section and the current diff, then make that sect
 
 "### Needs your eyes": what a person has to look at, worst first. Start every line with a marker — [critical] could lose data, break production or expose something; [important] wrong behaviour, a missing case, or a decision you were not entitled to make; [minor] worth knowing, safe to ignore — then one short sentence on what to look at and why it matters. Nothing routine belongs here: an empty section is a good outcome.
 
-If the "## Review" section describes something the diff does not, correct that section — and only that section — so the person reading it sees what really changed.`,
+If the "## Review" section describes something the diff does not, correct that section — and only that section — so the person reading it sees what really changed.
+
+What approval does next depends on this thread's delivery policy, and your session context says which. Into Deliver it keeps YOU — the next message names that stage's own work rather than restarting the conversation. Straight into Verify it hands the card to a fresh agent — not you — and the "## Review" section you leave behind is what that agent reads first.`,
   },
   {
     stage: 'deliver',
@@ -106,7 +119,9 @@ If the "## Review" section describes something the diff does not, correct that s
 
 Follow this thread's delivery policy for what has to be asked first. Never merge and never deploy further than the policy allows; both of those are the user's.
 
-Record what shipped under "### Delivery" in the card's "## Review" section: the PR/MR URL, the pipeline's verdict, and which environments the deploy actually reached. If the pipeline stays red and you cannot fix it, do not move the card. Write what failed and why under "### Delivery failed", then ask the user with the AskUserQuestion tool what to do about that specific failure: fix it, ship without it, or leave it and carry on. Offer the options the failure actually allows, not a generic pair.`,
+Record what shipped under "### Delivery" in the card's "## Review" section: the PR/MR URL, the pipeline's verdict, and which environments the deploy actually reached. If the pipeline stays red and you cannot fix it, do not move the card. Write what failed and why under "### Delivery failed", then ask the user with the AskUserQuestion tool what to do about that specific failure: fix it, ship without it, or leave it and carry on. Offer the options the failure actually allows, not a generic pair.
+
+Moving the card on hands it to a fresh agent in Verify — not you. Whatever it needs to know about what shipped belongs in "### Delivery", not left for you to explain later.`,
   },
   // THE ONE PROMPT THAT IS NOT THE EXPORT VERBATIM. The design's DELIVER>VERIFY
   // predates the skip ruling: it runs three paragraphs and knows only pass and

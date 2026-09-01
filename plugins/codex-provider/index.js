@@ -28,6 +28,10 @@
 // AskUserQuestion tool". `start` has no arrow on the design's rail and keeps its
 // own wording; verify additionally keeps the SKIPPED paragraph, which is newer
 // than the export.
+//
+// A CLOSING PARAGRAPH ADDED 2026-08-31 to prepare, review and deliver — same
+// reasoning and same wording as claude-provider's own addition; see that
+// file's header comment. Server/handoff.js is what these paragraphs describe.
 const PROMPTS = [
   {
     stage: 'prepare',
@@ -41,18 +45,20 @@ You are already authorized to read, run commands and edit files in this workspac
 
 Ask clarifying questions in the conversation — a question here is a message, asked and answered in this thread, so ask whenever two readings of the card would lead to materially different work. Record every question and its answer in the card under "### Questions asked".
 
-Rewrite the card body, keeping the frontmatter intact, so it carries exactly these sections:
+Rewrite the card body, keeping the frontmatter intact, so it carries these sections, plus any Grid asks for further down this message:
 - "### Summary": what this card is, in two or three sentences a stranger could follow.
 - "### What I will change": the behaviour that will be different afterwards, not the files.
 - "### How I will know it works": the check that proves it, named concretely.
 - "### Requires your attention": anything the user must decide or accept. Empty is a good outcome.
 - "### Expected files I will touch": the files you expect to edit, and one line on anything shared.
 - "### Related cards": every open card this one depends on, blocks, follows up on, or shares files with. Closed cards do not belong here.
-- "### List of tasks": the ordered steps, in the format below. This becomes the agent task list in Doing.
+- "### List of tasks": the ordered steps, in the format below. Doing works from it.
 
-Write the task list as one markdown checkbox per line, in the order you will do them, each a single action with a verifiable end: "- [ ] Add the limiter middleware to the public router". Five to twelve is normal. Grid reads this list to show progress on the board, so no sub-bullets, no prose lines between them, and no step that means several unrelated things.
+Write the task list as one markdown checkbox per line, in the order you will do them, each a single action with a verifiable end: "- [ ] Add the limiter middleware to the public router". Five to twelve is normal. The Doing agent works this list top to bottom and ticks each line as it lands, so no sub-bullets, no prose lines between them, and no step that means several unrelated things.
 
-When the plan is written, ask once whether it is ready to build, and wait. That single question is the only approval gate in this stage — do not start building before it is answered.`,
+When the plan is written, ask once whether it is ready to build, and wait. That single question is the only approval gate in this stage — do not start building before it is answered.
+
+Approval hands this card to a fresh agent in Doing — not you, and not this conversation. The plan you wrote is the whole inheritance, so make sure it is everything the next agent needs.`,
   },
   {
     stage: 'start',
@@ -100,7 +106,9 @@ Read the card, its "## Review" section and the current diff, then make that sect
 
 "### Needs your eyes": what a person has to look at, worst first. Start every line with a marker — [critical] could lose data, break production or expose something; [important] wrong behaviour, a missing case, or a decision you were not entitled to make; [minor] worth knowing, safe to ignore — then one short sentence on what to look at and why it matters. Nothing routine belongs here: an empty section is a good outcome.
 
-If the "## Review" section describes something the diff does not, correct that section — and only that section — so the person reading it sees what really changed.`,
+If the "## Review" section describes something the diff does not, correct that section — and only that section — so the person reading it sees what really changed.
+
+What approval does next depends on this thread's delivery policy, and your session context says which. Into Deliver it keeps YOU — the next message names that stage's own work rather than restarting the conversation. Straight into Verify it hands the card to a fresh agent — not you — and the "## Review" section you leave behind is what that agent reads first.`,
   },
   {
     stage: 'deliver',
@@ -112,7 +120,9 @@ If the "## Review" section describes something the diff does not, correct that s
 
 This thread's delivery policy in your session context is the authority on what needs asking. Where it authorizes an action, take it without a further check-in; where it says ask, ask. Never merge and never deploy further than the policy allows — both of those are the user's.
 
-Record what shipped under "### Delivery" in the card's "## Review" section: the PR/MR URL, the pipeline's verdict, and which environments the deploy actually reached. If the pipeline stays red and you cannot fix it, do not move the card. Write what failed and why under "### Delivery failed", then ask the user in the conversation what to do about that specific failure: fix it, ship without it, or leave it and carry on. Offer the options the failure actually allows, not a generic pair.`,
+Record what shipped under "### Delivery" in the card's "## Review" section: the PR/MR URL, the pipeline's verdict, and which environments the deploy actually reached. If the pipeline stays red and you cannot fix it, do not move the card. Write what failed and why under "### Delivery failed", then ask the user in the conversation what to do about that specific failure: fix it, ship without it, or leave it and carry on. Offer the options the failure actually allows, not a generic pair.
+
+Moving the card on hands it to a fresh agent in Verify — not you. Whatever it needs to know about what shipped belongs in "### Delivery", not left for you to explain later.`,
   },
   {
     stage: 'verify',
