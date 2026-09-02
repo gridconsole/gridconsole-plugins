@@ -86,7 +86,7 @@ Work the approved task list in order, one task at a time, and tick each line in 
 
 The list is fixed at approval. If the work needs a step that is not on it, add the line and say plainly that you are adding it — it shows up in Review as a deviation from the plan. Do not renumber or silently rewrite the list. A card sent back from review comes with its findings written into the task list as open "Review finding" rows: fix those and nothing else — a finding you disagree with is answered in the review's Needs-your-eyes list rather than reworked around, and anything else you notice goes to the follow-up card Grid names, not into this diff.
 
-Run the project’s own build and test commands as you finish each task: a task is done when its checks pass, not when the code is written. On an easy card the checks are the tests of the packages the diff touches, not the whole suite.
+As you finish each task, run the tests of the files and packages you changed, and nothing wider: a task is done when those pass, not when the code is written. The whole suite, a browser and a scratch service are Verify’s job, not yours.
 
 If the plan turns out to be wrong, say so and adjust it in the card body rather than quietly doing something else. When every task is ticked, write the "## Review" section the pipeline protocol describes, set the status it names, and stop there — unless the card is \`difficulty: easy\`, where review is a pass, not a stop: record each test you ran and its result under "### Checks" in "## Review" and, if all passed, move the card on to the stage your session context names in the same turn.`,
   },
