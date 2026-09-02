@@ -41,6 +41,7 @@ const PROMPTS = [
     file: '.claude/commands/prepare.md',
     usedBy: 'inbox -> prepare',
     default: `Refine this card into a plan the user can approve. Read the card body and investigate the code before you write anything down.
+Decide the size first. A small card — a few files, a change you can describe in two sentences, no design decision, no schema or API change, no new dependency — is \`difficulty: easy\`: write that into the frontmatter (the person can change it back), write only "### Summary", "### What I will change" and "### Expected files I will touch", and set \`status: doing\` yourself. No "Ready to build" question and no approval wait: the plan is the diff. When in doubt it is not small, and the rest of this message applies.
 
 Ask clarifying questions with the AskUserQuestion tool — the picker renders here and is answered here, so ask whenever two readings of the card would lead to materially different work. Record every question and its answer in the card under "### Questions asked".
 
@@ -55,9 +56,9 @@ Rewrite the card body, keeping the frontmatter intact, so it carries these secti
 
 Write the task list as one markdown checkbox per line, in the order you will do them, each a single action with a verifiable end: "- [ ] Add the limiter middleware to the public router". Five to twelve is normal. The Doing agent works this list top to bottom and ticks each line as it lands, so no sub-bullets, no prose lines between them, and no step that means several unrelated things.
 
-Then ask ONE final "Ready to build" question and wait. Do not start building until it is approved.
+Otherwise, ask ONE final "Ready to build" question and wait. Do not start building until it is approved.
 
-Approval hands this card to a fresh agent in Doing — not you, and not this conversation. The plan you wrote is the whole inheritance, so make sure it is everything the next agent needs.`,
+Approval hands the card on: to a fresh agent when Doing wants another model or runs in another directory (a worktree), otherwise to you, in this conversation. Write the plan as if a stranger will build it either way — the card is the record the next stage reads.`,
   },
   {
     stage: 'start',
@@ -85,9 +86,9 @@ Work the approved task list in order, one task at a time, and tick each line in 
 
 The list is fixed at approval. If the work needs a step that is not on it, add the line and say plainly that you are adding it — it shows up in Review as a deviation from the plan. Do not renumber or silently rewrite the list.
 
-Run the project’s own build and test commands as you finish each task: a task is done when its checks pass, not when the code is written.
+Run the project’s own build and test commands as you finish each task: a task is done when its checks pass, not when the code is written. On an easy card the checks are the tests of the packages the diff touches, not the whole suite.
 
-If the plan turns out to be wrong, say so and adjust it in the card body rather than quietly doing something else. When every task is ticked, write the "## Review" section the pipeline protocol describes, set the status it names, and stop there.`,
+If the plan turns out to be wrong, say so and adjust it in the card body rather than quietly doing something else. When every task is ticked, write the "## Review" section the pipeline protocol describes, set the status it names, and stop there — unless the card is \`difficulty: easy\`, where review is a pass, not a stop: record each test you ran and its result under "### Checks" in "## Review" and, if all passed, move the card on to the stage your session context names in the same turn.`,
   },
   {
     stage: 'review',
@@ -95,7 +96,7 @@ If the plan turns out to be wrong, say so and adjust it in the card body rather 
     title: 'Self-review',
     file: '.claude/commands/self-review.md',
     usedBy: 'doing -> review',
-    default: `This card is in review and is waiting on the user, not on you — do not restart the work and do not move the card.
+    default: `This card is in review. Unless it is \`difficulty: easy\`, it is waiting on the user, not on you — do not restart the work and do not move the card. An easy card is passing through: if every line under "### Checks" passed, move it on yourself to the stage your session context names; if one failed, fix it or ask the user with AskUserQuestion.
 
 Read the card, its "## Review" section and the current diff, then make that section worth reading in thirty seconds.
 
@@ -107,7 +108,7 @@ Read the card, its "## Review" section and the current diff, then make that sect
 
 If the "## Review" section describes something the diff does not, correct that section — and only that section — so the person reading it sees what really changed.
 
-What approval does next depends on this thread's delivery policy, and your session context says which. Into Deliver it keeps YOU — the next message names that stage's own work rather than restarting the conversation. Straight into Verify it hands the card to a fresh agent — not you — and the "## Review" section you leave behind is what that agent reads first.`,
+What approval does next depends on this thread's delivery policy, and your session context says which. Into Deliver it keeps YOU — the next message names that stage's own work rather than restarting the conversation. Into Verify it hands the card to a fresh agent when that stage wants another model or runs in another directory, otherwise to you — the message that arrives says which — and the "## Review" section you leave behind is what that stage reads first.`,
   },
   {
     stage: 'deliver',
@@ -121,7 +122,7 @@ Follow this thread's delivery policy for what has to be asked first. Never merge
 
 Record what shipped under "### Delivery" in the card's "## Review" section: the PR/MR URL, the pipeline's verdict, and which environments the deploy actually reached. If the pipeline stays red and you cannot fix it, do not move the card. Write what failed and why under "### Delivery failed", then ask the user with the AskUserQuestion tool what to do about that specific failure: fix it, ship without it, or leave it and carry on. Offer the options the failure actually allows, not a generic pair.
 
-Moving the card on hands it to a fresh agent in Verify — not you. Whatever it needs to know about what shipped belongs in "### Delivery", not left for you to explain later.`,
+Moving the card on hands it to Verify: a fresh agent when that stage wants another model or directory, otherwise you. Either way, whatever Verify needs to know about what shipped belongs in "### Delivery", not in this conversation.`,
   },
   // THE ONE PROMPT THAT IS NOT THE EXPORT VERBATIM. The design's DELIVER>VERIFY
   // predates the skip ruling: it runs three paragraphs and knows only pass and
@@ -138,7 +139,7 @@ Moving the card on hands it to a fresh agent in Verify — not you. Whatever it 
     title: 'Verify',
     file: '.claude/commands/verify.md',
     usedBy: 'deliver -> verify',
-    default: `Verify this card per the verify stage in your session context. Verifying means proving the change works where it runs: restart the affected service or app so it picks up the change, then drive the changed feature end-to-end in the real UI. Tests alone do not count. Run the thread verification command when one is configured.
+    default: `Verify this card per the verify stage in your session context. Verifying means proving the change works where it runs, scoped to what changed: \`git diff --name-only <base>...HEAD\` says what the diff touches. Restart or start a scratch instance of a service only when the diff touches that service; drive the changed feature end-to-end in the real UI only when it touches UI code — for a UI change, tests alone do not count. Run the thread verification command when one is configured; on an easy card run the tests of the packages the diff touches instead of the whole suite.
 
 A step this machine cannot run at all — driving a browser with no Claude in Chrome pairing is the usual one — is SKIPPED. A skip is neither a pass nor a failure: verify everything that does not need it, record the step that did not run on its own line as \`browser: skipped\` with the reason, and never fold it into a pass.
 

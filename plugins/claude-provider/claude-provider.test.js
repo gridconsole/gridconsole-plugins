@@ -145,6 +145,24 @@ test('prepare asks for the seven plan sections, the task-list format and the que
   assert.ok(prepare.includes('"### Questions asked"'));
 });
 
+test('the light walk is in the prompts themselves, not only in the session context', () => {
+  // A heavy default prompt would undo a light context: the prompt is the
+  // message the agent acts on. So each stage says what an easy card skips.
+  assert.match(at('prepare'), /Decide the size first/);
+  assert.match(at('prepare'), /`difficulty: easy`/);
+  assert.match(at('prepare'), /set `status: doing` yourself/);
+  assert.match(at('build'), /"### Checks"/);
+  assert.match(at('build'), /move the card on to the stage your session context names/);
+  assert.match(at('review'), /An easy card is passing through/);
+  assert.match(at('verify'), /scoped to what changed/);
+  assert.match(at('verify'), /instead of the whole suite/);
+  // And no stage promises a fresh agent it may not get: the handoff keeps the
+  // agent when the model and directory are unchanged.
+  for (const stage of ['prepare', 'review', 'deliver']) {
+    assert.doesNotMatch(at(stage), /fresh agent (in [A-Z][a-z]+ )?— not you/, `${stage} still promises an unconditional fresh agent`);
+  }
+});
+
 test('build pins the task-list discipline the board reads', () => {
   const build = at('build');
   assert.match(build, /Work the approved task list in order/);
