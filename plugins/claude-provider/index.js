@@ -54,7 +54,7 @@ Rewrite the card body, keeping the frontmatter intact, so it carries these secti
 - "### Related cards": every open card this one depends on, blocks, follows up on, or shares files with. Closed cards do not belong here.
 - "### List of tasks": the ordered steps, in the format below. Doing works from it.
 
-Write the task list as one markdown checkbox per line, in the order you will do them, each a single action with a verifiable end: "- [ ] Add the limiter middleware to the public router". Five to twelve is normal. The Doing agent works this list top to bottom and ticks each line as it lands, so no sub-bullets, no prose lines between them, and no step that means several unrelated things.
+Write the task list as one markdown checkbox per line, in the order you will do them, each a single action with a verifiable end: "- [ ] Add the limiter middleware to the public router". Five to twelve is normal. Keep the card the size of the ask: the plan delivers what the card asks and nothing more, and anything you notice on the way that it did not ask for — a default worth changing, a neighbouring bug, a refactor — goes under "### Related cards" as a follow-up to file, not into the task list. A card whose list passes twelve tasks or whose files span more than three areas (engine, UI, CLI and docs count separately) is more than one card: offer the masterplan split as the recommended option in the "Ready to build" question. The Doing agent works this list top to bottom and ticks each line as it lands, so no sub-bullets, no prose lines between them, and no step that means several unrelated things.
 
 Otherwise, ask ONE final "Ready to build" question and wait. Do not start building until it is approved.
 
@@ -84,7 +84,7 @@ When the work is done, write the "## Review" section the protocol describes and 
 
 Work the approved task list in order, one task at a time, and tick each line in the card the moment its checks pass — "- [x]". Between your messages that list is the only signal of what you are doing, so it has to be true at all times: never tick ahead, and never leave a finished task open.
 
-The list is fixed at approval. If the work needs a step that is not on it, add the line and say plainly that you are adding it — it shows up in Review as a deviation from the plan. Do not renumber or silently rewrite the list.
+The list is fixed at approval. If the work needs a step that is not on it, add the line and say plainly that you are adding it — it shows up in Review as a deviation from the plan. Do not renumber or silently rewrite the list. A card sent back from review comes with its findings written into the task list as open "Review finding" rows: fix those and nothing else — a finding you disagree with is answered in the review's Needs-your-eyes list rather than reworked around, and anything else you notice goes to the follow-up card Grid names, not into this diff.
 
 Run the project’s own build and test commands as you finish each task: a task is done when its checks pass, not when the code is written. On an easy card the checks are the tests of the packages the diff touches, not the whole suite.
 
@@ -145,7 +145,7 @@ A step this machine cannot run at all — driving a browser with no Claude in Ch
 
 Record the outcome under "### Verification" in the card's "## Review" section: pass, fail or skipped per step, plus one line of the evidence you actually saw.
 
-Only when nothing failed do you move the card on as the pipeline protocol says. On failure keep it in verify, write what failed under "### Verification failed", and ask the user with the AskUserQuestion tool what to do about that failure: fix it, accept it, or roll the change back. Offer the options the failure actually allows. A skip on its own is not a failure and does not hold the card.`,
+Only when nothing failed do you move the card on as the pipeline protocol says. On failure keep it in verify, write what failed under "### Verification failed", and ask the user with the AskUserQuestion tool what to do about that failure: fix it, accept it, or roll the change back. Offer the options the failure actually allows. A skip on its own is not a failure and does not hold the card. Findings the adversarial review raised and the user accepted at approve are the user's decision: verify the change, and do not re-open the review or fail the card over them.`,
   },
 ];
 
