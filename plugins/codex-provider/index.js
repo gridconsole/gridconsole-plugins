@@ -97,7 +97,7 @@ If the plan turns out to be wrong, say so and adjust it in the card body rather 
     title: 'Self-review',
     file: '.codex/prompts/self-review.md',
     usedBy: 'doing -> review',
-    default: `This card is in review. Unless it is \`difficulty: easy\`, it is waiting on the user, not on you — do not restart the work and do not move the card. An easy card is passing through: if every line under "### Checks" passed, move it on yourself to the stage your session context names; if one failed, fix it or write what failed under "### Needs your eyes" and stop for the user.
+    default: `This card is in review. Unless it is \`difficulty: easy\`, it is waiting on the user, not on you — do not restart the work and do not move the card. An easy card is passing through: if every line under "### Checks" passed, move it on yourself to the stage your session context names; if one failed, fix it, or say what failed in the review section and stop for the user.
 
 Read the card, its "## Review" section and the current diff, then make that section worth reading in thirty seconds.
 
