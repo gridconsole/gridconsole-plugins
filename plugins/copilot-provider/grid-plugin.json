@@ -1,0 +1,73 @@
+{
+  "id": "copilot-provider",
+  "name": "copilot-provider",
+  "version": "0.1.0",
+  "apiVersion": ">=0.2",
+  "publisher": "grid console",
+  "description": "Sessions through GitHub Copilot CLI, and the stage prompts the default SDLC sends when it starts or resumes one.",
+  "stability": {
+    "level": "unstable",
+    "note": "Two things are unproven: the stage prompts, written for this provider rather than transcribed from either sibling, and the session surface itself — spawn, transcript and hooks all riding the 0.2 contract for its first real consumer — which has had no use inside a running Grid workspace yet."
+  },
+  "permissions": {
+    "network": [],
+    "cardWrite": false,
+    "filesystem": [],
+    "shell": false,
+    "spawn": {
+      "bin": "copilot",
+      "argv": [
+        "-i", "{prompt}",
+        "--session-id", "{sessionId}",
+        "--allow-all-tools",
+        "--model", "{model}",
+        "--no-auto-update",
+        "--no-remote",
+        "--no-color"
+      ],
+      "resumeArgv": ["--resume", "{sessionId}"],
+      "env": { "COPILOT_HOME": "{stateDir}/copilot-home" },
+      "sessionId": "mint-uuid",
+      "transcript": {
+        "path": "{env.COPILOT_HOME}/session-state/{sessionId}/events.jsonl",
+        "format": "jsonl",
+        "map": {
+          "user.message": { "role": "user", "text": "data.content" },
+          "assistant.message": { "role": "assistant", "text": "data.content" },
+          "tool.execution_start": { "role": "tool", "name": "data.toolName" }
+        }
+      },
+      "hooks": {
+        "file": "{env.COPILOT_HOME}/hooks/hooks.json",
+        "shape": "claude-compatible",
+        "events": {
+          "sessionStart": "session-start",
+          "agentStop": "stop",
+          "userPromptSubmitted": "user-prompt-submit",
+          "preToolUse": "activity",
+          "postToolUse": "edit-write",
+          "sessionEnd": "session-end",
+          "notification": "notification"
+        }
+      }
+    }
+  },
+  "hooks": [],
+  "points": [
+    "agent.provider",
+    "llm.provider"
+  ],
+  "activation": [],
+  "configuration": {
+    "prompts.prepare": {"type": "prompt", "title": "Prepare prompt", "default": "Settings › SDLC"},
+    "prompts.start": {"type": "prompt", "title": "Start prompt (no prepare stage)", "default": "Settings › SDLC"},
+    "prompts.build": {"type": "prompt", "title": "Build prompt", "default": "Settings › SDLC"},
+    "prompts.review": {"type": "prompt", "title": "Self-review prompt", "default": "Settings › SDLC"},
+    "prompts.deliver": {"type": "prompt", "title": "Deliver prompt", "default": "Settings › SDLC"},
+    "prompts.verify": {"type": "prompt", "title": "Verify prompt", "default": "Settings › SDLC"},
+    "defaultModel": {"type": "string", "title": "Default model", "default": ""},
+    "mcpConfig": {"type": "file", "title": "MCP servers", "default": ".github/mcp.json"},
+    "instructions": {"type": "file", "title": "Instructions", "default": "AGENTS.md"}
+  },
+  "main": "index.js"
+}

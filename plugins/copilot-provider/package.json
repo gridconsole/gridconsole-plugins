@@ -1,0 +1,9 @@
+{
+  "name": "copilot-provider",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test copilot-provider.test.js"
+  }
+}
