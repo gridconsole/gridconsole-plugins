@@ -37,6 +37,55 @@ function defineHook(fn) {
   return fn;
 }
 
+/**
+ * Mirrors pluginhost.js's `contributionRefusal` for the one point it
+ * re-validates: an `agent.provider` contribution may only REFERENCE this
+ * plugin's own declared `permissions.spawn`, never invent one or restate a
+ * disagreeing one — a spawn description is a permission, and permissions
+ * live in the signed manifest, not in whatever a contribution happens to
+ * return on a given run. Returns '' when the payload agrees, or the reason
+ * it does not, so a plugin author's own test on `fakePluginContext` fails
+ * for the same reason the daemon would refuse the contribution.
+ *
+ * Simplified from the host's: plain JSON equality rather than
+ * `pack.stableStringify` (this package cannot depend on gridconsole-core),
+ * so it can be fooled by differing key order inside a nested object. Good
+ * enough to catch the mistake this exists for — a contributed `bin`/`argv`/
+ * `env` that quietly drifted from the manifest, or a `spawn` the manifest
+ * never declared — not a security boundary; the host is that boundary.
+ */
+function agentProviderRefusal(manifest, payload) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return 'an agent.provider contribution must be an object';
+  }
+  const declared = (manifest && manifest.permissions && manifest.permissions.spawn) || null;
+  const has = (key) => Object.prototype.hasOwnProperty.call(payload, key);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  if (has('spawn')) {
+    if (!declared) {
+      return 'the contribution names a spawn that grid-plugin.json does not declare'
+        + ' — a spawn description is a permission, and permissions live in the signed manifest';
+    }
+    if (payload.spawn !== true && !same(payload.spawn, declared)) {
+      return 'the contributed spawn does not match the one grid-plugin.json declares'
+        + ' — contribute `spawn: true` to reference it rather than restating it';
+    }
+  }
+  if (has('bin') && declared && payload.bin !== declared.bin) {
+    return `the contribution runs "${payload.bin}" but grid-plugin.json declares "${declared.bin}"`;
+  }
+  for (const key of ['argv', 'resumeArgv', 'env']) {
+    if (!has(key)) continue;
+    if (!declared) {
+      return `the contribution carries "${key}", which only a declared "permissions.spawn" may say`;
+    }
+    if (!same(payload[key], declared[key] === undefined ? null : declared[key])) {
+      return `the contributed "${key}" does not match the one grid-plugin.json declares`;
+    }
+  }
+  return '';
+}
+
 /** A card shaped like the engine's scanner cards. */
 function fakeCard(overrides = {}) {
   return {
@@ -132,6 +181,10 @@ function fakePluginContext(manifest, values = {}) {
     contribute(point, payload) {
       if (!(manifest.points || []).includes(point)) {
         throw new Error(`contribution point ${point} not declared in grid-plugin.json`);
+      }
+      if (point === 'agent.provider') {
+        const reason = agentProviderRefusal(manifest, payload);
+        if (reason) throw new Error(reason);
       }
       ctx.contributions.push({ point, payload });
     },

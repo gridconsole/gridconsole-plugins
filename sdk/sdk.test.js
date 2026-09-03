@@ -55,6 +55,43 @@ test('fakePluginContext records registrations and enforces the manifest', () => 
   assert.strictEqual(ctx.hookRegistrations.length, 0);
 });
 
+// --- agent.provider mirrors the host's spawn re-validation -----------------
+
+test('fakePluginContext refuses an agent.provider spawn the manifest does not declare', () => {
+  const manifest = { id: 'p', version: '0.1.0', points: ['agent.provider'] };
+  const ctx = fakePluginContext(manifest);
+  assert.throws(
+    () => ctx.contribute('agent.provider', { id: 'x', name: 'X', bin: 'x', prompts: [], spawn: true }),
+    /names a spawn that grid-plugin\.json does not declare/,
+  );
+});
+
+test('fakePluginContext refuses a contributed bin that disagrees with the declared spawn', () => {
+  const manifest = {
+    id: 'p',
+    version: '0.1.0',
+    points: ['agent.provider'],
+    permissions: { spawn: { bin: 'copilot', argv: ['{prompt}'] } },
+  };
+  const ctx = fakePluginContext(manifest);
+  assert.throws(
+    () => ctx.contribute('agent.provider', { id: 'x', name: 'X', bin: 'curl', prompts: [], spawn: true }),
+    /runs "curl" but grid-plugin\.json declares "copilot"/,
+  );
+});
+
+test('fakePluginContext accepts a contribution that only references the declared spawn', () => {
+  const manifest = {
+    id: 'p',
+    version: '0.1.0',
+    points: ['agent.provider'],
+    permissions: { spawn: { bin: 'copilot', argv: ['{prompt}'] } },
+  };
+  const ctx = fakePluginContext(manifest);
+  ctx.contribute('agent.provider', { id: 'x', name: 'X', bin: 'copilot', prompts: [], spawn: true });
+  assert.strictEqual(ctx.contributions.length, 1);
+});
+
 // --- settings on the fake context -----------------------------------------
 
 test('declaredDefaults reads the value-bearing settings and skips the rest', () => {

@@ -5,10 +5,21 @@ the `grid-plugin.json` manifest shape, the stage-transition hooks
 (`before:`/`after:` an arrow, plus `on:attention`, resolved with `ctx.pass()`,
 `ctx.block({reason, fix})` or `ctx.amend({sections})`), the `activate(context)`
 plugin context, and the payload shapes for the contribution points the bundled
-plugins register.
+plugins register — including `agent.provider`'s `prompts` array and the
+`permissions.spawn` contract that lets a plugin bring its own coding agent.
 
 The contract is documented in the Grid Console docs (Plugins section). Those
 chapters are normative; this package tracks them.
+
+## Writing an agent provider
+
+`plugins/copilot-provider/` in this repo is the closest thing to a worked
+example for a new provider: its `grid-plugin.json` declares a real, accepted
+`permissions.spawn` block (see `PluginSpawn` in `types.d.ts`), and its
+`index.js` shows the `agent.provider` contribution — `prompts` (one entry
+per stage, `AgentPromptEntry`) plus `spawn: true`, which tells the host
+"start me the way my manifest says" rather than restating the spawn
+description a second, unsigned time.
 
 ## Test helpers
 

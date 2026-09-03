@@ -46,13 +46,14 @@ export interface SettingSpec {
  *  can only be printed and never picked. Declare `configuration` instead. */
 export type SettingRow = [key: string, type: string, value: string];
 
-/** The sixteen published extension points. A point outside this union is
+/** The seventeen published extension points. A point outside this union is
  *  refused when the manifest is read, not when `contribute` is called. */
 export type ExtensionPoint =
   | 'stage.transition' | 'agent.provider' | 'llm.provider' | 'panel.slot'
   | 'editor.contextMenu' | 'keymap.command' | 'mcp.server' | 'sdlc.workflow'
   | 'card.section' | 'deliver.target' | 'file.explain' | 'usage.reporter'
-  | 'report.redactor' | 'theme.register' | 'settings.page' | 'prompt.file';
+  | 'report.redactor' | 'theme.register' | 'dictate.provider'
+  | 'settings.page' | 'prompt.file';
 
 /**
  * What a plugin is allowed to do. Declared here, enforced by the host: the
@@ -69,8 +70,219 @@ export interface PluginPermissions {
   cardWrite?: boolean;
   /** Directories it may read and write. Empty means its own directory only. */
   filesystem?: string[];
-  /** Whether it may spawn processes. */
+  /** Whether it may spawn processes. This is a flag on the PLUGIN WORKER —
+   *  whether ITS code may fork a child process. It is a different question
+   *  from `spawn` below, which names a program Grid runs on the plugin's
+   *  behalf, outside that fence, with the user's own rights — and it is not
+   *  overloaded to mean anything about that. */
   shell?: boolean;
+  /**
+   * Since plugin API 0.2: the description that lets a plugin bring its OWN
+   * coding agent (`copilot`, say) as a session, without a line of core code
+   * knowing that agent exists — read by `spawnOf(manifest)` and rendered for
+   * an install prompt by `describeSpawn(spawn)` (both
+   * gridconsole-core:ide/engine/pluginhost.js).
+   *
+   * It rides HERE, under `permissions`, and not in a contributed
+   * `agent.provider` payload, for three properties a contribution has none
+   * of: SIGNED (`permissions` is covered by the manifest's Ed25519
+   * signature; a contributed payload is signed by nothing), SHOWN (printed
+   * before an install, on the screen of the person saying yes), and
+   * COMPARABLE (any change to this block is a widening update, which the
+   * host refuses unless acknowledged — so v1 shipping `copilot` cannot
+   * quietly become v2 shipping `curl`). A contributed `agent.provider`
+   * payload may only REFERENCE this block (`spawn: true`) — the host drops
+   * a contribution whose `spawn`, `bin`, `argv`, `resumeArgv` or `env`
+   * disagrees with what is declared here. See `AgentProviderPayload.spawn`.
+   *
+   * See `plugins/copilot-provider/grid-plugin.json` in this repo for a real,
+   * accepted spawn contract — it is the closest thing to a worked example
+   * for a new provider.
+   */
+  spawn?: PluginSpawn;
+}
+
+// ---------------------------------------------------------------------------
+// THE SPAWN CONTRACT — `permissions.spawn`, as gridconsole-core's
+// ide/engine/pluginhost.js validates it (readSpawn and its helpers). Every
+// closed vocabulary below is a literal union rather than `string` ON
+// PURPOSE: where the validator refuses a value, the type should not offer it
+// as a legal one to write. A regex constraint (bin's character set, argv's
+// literal shape, env names) cannot be expressed in TypeScript at all —
+// those stay `string`, documented with the pattern the host actually checks.
+
+/** A bare program name Grid resolves off PATH at spawn time: letters,
+ *  digits, "_" and "-" only — no "/", "\" or "." — matching
+ *  `/^[A-Za-z0-9][A-Za-z0-9_-]*$/`, at most 64 characters. An absolute path
+ *  is the operator's to pin (through their own PATH or a per-binary config
+ *  entry), never the plugin's: a path spelled here could point at a file
+ *  the plugin bundled inside itself, which is not "run the user's agent",
+ *  it is "run my payload", bypassing the whole permission model. */
+export type SpawnBin = string;
+
+/** The closed placeholder vocabulary for a whole `argv`/`resumeArgv`
+ *  element. A placeholder is never embeddable inside a longer string —
+ *  `"--dir={cwd}"` is refused — because argv is exec'd directly with no
+ *  shell, and only a whole-element substitution cannot change the SHAPE of
+ *  the command line (whatever `{cwd}` expands to, spaces and all, is one
+ *  argv entry). */
+export type SpawnArgvPlaceholder =
+  | '{prompt}' | '{sessionId}' | '{cwd}' | '{model}' | '{effort}' | '{cardPath}';
+
+/**
+ * One `argv`/`resumeArgv` element: EITHER a whole-element placeholder from
+ * `SpawnArgvPlaceholder`, OR a literal flag/word matching
+ * `/^-{0,2}[A-Za-z0-9][A-Za-z0-9._-]*$/` — up to two leading dashes, then
+ * letters, digits, ".", "_", "-", and no "=" (so `--foo=bar` is
+ * unspellable), no space, no shell metacharacter. TypeScript cannot check
+ * the literal's regex; `readArgvTemplate` in pluginhost.js is the real
+ * gate. `(string & {})` keeps `SpawnArgvPlaceholder`'s members suggested by
+ * an editor without rejecting an arbitrary literal.
+ *
+ * THE DROPPING RULE, because it is this contract's most surprising
+ * behaviour: when core has no value for a placeholder, that element is
+ * REMOVED — and so is the element immediately before it when THAT is a
+ * literal beginning with "-". Nothing is substituted: never an empty
+ * string, never the literal text `"{model}"`. So `["--model", "{model}"]`
+ * with no model configured contributes NO FLAG AT ALL, rather than
+ * `--model ''`. `{prompt}` and `{cwd}` always have a value; `{sessionId}`
+ * does whenever `sessionId: "mint-uuid"` is declared; `{model}`, `{effort}`
+ * and `{cardPath}` routinely do not. It exists because `@github/copilot`
+ * 1.0.82 refuses `--model auto` beside `--effort <level>`.
+ */
+export type SpawnArgvElement = SpawnArgvPlaceholder | (string & {});
+
+/** Placeholders an ENV VALUE may use — embeddable, unlike argv's, because an
+ *  env value is one string with no argument boundary to break. `{env.X}`
+ *  is refused here: one env value referring to another is a dependency
+ *  graph, and nothing needs one. */
+export type SpawnEnvPlaceholder = '{stateDir}' | '{cwd}' | '{sessionId}' | '{cardPath}';
+
+/** An environment variable NAME a plugin may set: `/^[A-Z][A-Z0-9_]*$/`.
+ *  Denied outright: `PATH SHELL IFS ENV PS4 PAGER EDITOR VISUAL CLASSPATH
+ *  JAVA_TOOL_OPTIONS GEM_PATH LOCPATH HOSTALIASES`. Denied by prefix: `LD_
+ *  DYLD_ NODE_ BASH_ PERL PYTHON RUBY GIT_ GRID_` — because every one of
+ *  these decides what code a process loads or runs, rather than telling the
+ *  agent where its own files are. TypeScript cannot check the denylist;
+ *  `readSpawnEnv` in pluginhost.js is the real gate. */
+export type SpawnEnvName = string;
+
+/** `permissions.spawn.env`: at most 16 entries. Each value is a string of
+ *  at most 1024 characters built from `SpawnEnvPlaceholder`s and literals
+ *  with no ".." segment. */
+export type SpawnEnv = Record<SpawnEnvName, string>;
+
+/** How a NEW session's id is decided. Absent means Grid presets nothing and
+ *  the CLI picks its own; `"mint-uuid"` means Grid mints a v4 UUID before
+ *  the spawn and hands it over. Required to be `"mint-uuid"` whenever
+ *  `argv` spells `{sessionId}` — otherwise the placeholder has nothing to
+ *  expand to and the dropping rule would quietly remove `--session-id`. */
+export type SpawnSessionId = 'mint-uuid';
+
+/**
+ * A rooted path template: at most 512 characters, no ".." segment anywhere,
+ * and it must START with a root placeholder — `{stateDir}`, `{cwd}`, or
+ * `{env.NAME}` naming a key this same spawn block's own `env` sets. A
+ * literal `/` root is refused: this file is read by Grid and rendered into
+ * a card, so a plugin may not root it anywhere on disk. Interior
+ * placeholders may additionally use `{sessionId}`. TypeScript cannot check
+ * the "starts with" or ".." rules; `readPathTemplate` in pluginhost.js is
+ * the real gate.
+ */
+export type SpawnPathTemplate = string;
+
+/** The role a mapped transcript event may claim — Grid's own transcript
+ *  vocabulary, and a LITERAL word (never a selector, unlike `text`/`name`
+ *  below). */
+export type SpawnTranscriptRole = 'user' | 'assistant' | 'tool' | 'system';
+
+/** A dotted field selector into one transcript event, e.g. `"data.content"`:
+ *  `/^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$/`, at most 8
+ *  segments, and never a segment named `__proto__`, `constructor` or
+ *  `prototype` — those walk the prototype chain rather than the event, and
+ *  a naive `obj[a][b]` adapter is how that becomes a write to
+ *  `Object.prototype`. */
+export type SpawnSelector = string;
+
+/** One transcript event type's field mapping. `role` IS A LITERAL WORD;
+ *  `text` and `name` ARE DOTTED SELECTORS — the difference is spelled by
+ *  field, not by syntax, so `{ role: "user", text: "data.content" }` stays
+ *  unambiguous. At least one of the three must be present. */
+export interface SpawnTranscriptFieldMap {
+  role?: SpawnTranscriptRole;
+  text?: SpawnSelector;
+  name?: SpawnSelector;
+}
+
+/** `permissions.spawn.transcript` — where the agent writes what it said,
+ *  and how to read one line of it as a turn. */
+export interface SpawnTranscript {
+  /** Rooted path template — see `SpawnPathTemplate`. */
+  path: SpawnPathTemplate;
+  /** The only format read today; a word the adapter does not yet branch on
+   *  is a word that means nothing. */
+  format: 'jsonl';
+  /** Dotted selector naming the field of a line that carries its event
+   *  type. Defaults to `"type"` when absent. */
+  event?: SpawnSelector;
+  /** The agent's own event type (e.g. `"user.message"`, matching
+   *  `/^[A-Za-z][A-Za-z0-9._-]*$/`) to the fields to read off it.
+   *  Non-empty, at most 32 entries. */
+  map: Record<string, SpawnTranscriptFieldMap>;
+}
+
+/** The one hook file shape the installer writes:
+ *  `{ hooks: { <Event>: [{ matcher?, hooks: [{ type: 'command', command }] }] } }`
+ *  — the shape `hookinstall.js` already merges into `settings.local.json`. */
+export type SpawnHookShape = 'claude-compatible';
+
+/** Grid's own hook event names — the right-hand side of
+ *  `permissions.spawn.hooks.events`. */
+export type GridHookEvent =
+  | 'session-start' | 'user-prompt-submit' | 'notification' | 'stop'
+  | 'session-end' | 'ask-user-question' | 'answered-question' | 'edit-write'
+  | 'activity';
+
+/**
+ * `permissions.spawn.hooks` — the file Grid merges its hook entries into,
+ * and which of the agent's own events carry which of Grid's.
+ *
+ * NOTE THE DIRECTION: a key is the AGENT's own event name, the value is one
+ * of GRID's — `{ "agentStop": "stop" }`, never the reverse.
+ */
+export interface SpawnHooks {
+  /** Rooted path template — see `SpawnPathTemplate`. */
+  file: SpawnPathTemplate;
+  shape: SpawnHookShape;
+  /** Non-empty, at most 32 entries. Key: the agent's own event name
+   *  (`/^[A-Za-z][A-Za-z0-9_-]*$/`). Value: one of `GridHookEvent`. */
+  events: Record<string, GridHookEvent>;
+}
+
+/**
+ * `permissions.spawn` itself — the whole contract a manifest may declare.
+ * Keys are closed to the seven below; an unknown key is a load error, not a
+ * silently ignored one. Read through `spawnOf(manifest)`
+ * (gridconsole-core:ide/engine/pluginhost.js), which answers `null` for the
+ * ordinary case of a plugin that spawns nothing.
+ *
+ * See `plugins/copilot-provider/grid-plugin.json` in this repo for a real,
+ * accepted example of this block.
+ */
+export interface PluginSpawn {
+  /** Bare program name — see `SpawnBin`. Resolved off PATH at spawn time. */
+  bin: SpawnBin;
+  /** Non-empty, at most 64 elements, each at most 256 characters. */
+  argv: SpawnArgvElement[];
+  /** Same element rules as `argv`. Absent means this provider can only
+   *  start fresh — there is no resume shape. */
+  resumeArgv?: SpawnArgvElement[];
+  /** At most 16 entries — see `SpawnEnv`. */
+  env?: SpawnEnv;
+  /** Absent means the CLI picks its own id. */
+  sessionId?: SpawnSessionId;
+  transcript?: SpawnTranscript;
+  hooks?: SpawnHooks;
 }
 
 /** When a plugin wakes up: `stage:deliver`, `view:board`, `command:<id>`.
@@ -246,34 +458,80 @@ export interface SdlcWorkflowPayload {
   stages: SdlcTransition[];
 }
 
-/** One per-stage command an agent provider supplies. */
-export interface AgentCommand {
-  name: string;
-  file: string;
-  /** The arrow that runs it, e.g. "inbox -> prepare". */
-  usedBy: string;
+/** The stages a session can be started or resumed on — `stageprompts.js`'s
+ *  own list (gridconsole-core:ide/engine/stageprompts.js `STAGES`), a
+ *  deliberately different vocabulary from the pipeline's `Stage`: `start`
+ *  is "this card's type has no prepare stage, so there is no plan to send a
+ *  message about", and `adversarial` is a fresh-reviewer ROLE that Review
+ *  hands a card to (server/adversarial.js), not a pipeline stage a card
+ *  ever sits in. */
+export type PromptStage =
+  | 'prepare' | 'start' | 'build' | 'review' | 'deliver' | 'verify' | 'adversarial';
+
+/**
+ * One stage's contributed message — an entry of `agent.provider`'s
+ * `prompts` array, read by `ide/engine/stageprompts.js`. Precedence at
+ * resolve time: a workspace override in Settings › SDLC, then `file`'s
+ * body when it exists on disk (Grid never writes it), then `default`.
+ *
+ * Every field but `stage` is read with a fallback in the host
+ * (`(entry && entry.name) || ...`), so a sparse entry still resolves — but
+ * a provider that omits `default` gets `stageprompts.js`'s own built-in
+ * text sent instead of its own wording, silently.
+ */
+export interface AgentPromptEntry {
+  stage: PromptStage;
+  /** The slash-command name Settings › Commands shows, e.g. `"/prepare"`. */
+  name?: string;
+  title?: string;
+  /** Workspace-relative path a user may keep their own override at, e.g.
+   *  `".claude/commands/prepare.md"` — read fresh on every resolve. Grid
+   *  never writes this file. */
+  file?: string;
+  /** The arrow (or resume) that sends this message, e.g.
+   *  `"inbox -> prepare"` — shown for context, not used to route anything. */
+  usedBy?: string;
+  /** The shipped text — what actually goes out when no workspace override
+   *  and no `file` exist. */
+  default: string;
 }
 
-/** `agent.provider` — what runs sessions and the per-stage commands. */
+/**
+ * `agent.provider` — who runs sessions with this agent, and the per-stage
+ * messages it sends them. `plugins/copilot-provider/` in this repo is the
+ * closest thing to a worked example for a new provider: its `grid-plugin.json`
+ * is a real, accepted `permissions.spawn` block, and its `index.js` shows
+ * the `spawn: true` contribution below.
+ */
 export interface AgentProviderPayload {
   id: string;
   name: string;
+  /** Decorative when this plugin's manifest declares no `permissions.spawn`
+   *  — core has always started the two bundled providers that predate the
+   *  spawn contract (`claude`, `codex`) from code hard-coded in
+   *  `sessions.js`, never from this string. Must equal the manifest's
+   *  `permissions.spawn.bin` when one is declared — a contribution naming a
+   *  different `bin` is dropped, see `spawn` below. */
   bin: string;
-  commands: AgentCommand[];
-  /** Optional features exposed by providers with an automation-friendly CLI. */
-  capabilities?: {
-    nonInteractive?: boolean;
-    jsonl?: boolean;
-    resume?: boolean;
-    chat?: 'stable' | 'experimental' | false;
-    terminal?: boolean;
-  };
-  /** Declarative argv templates; the host remains responsible for spawning. */
-  invocation?: {
-    run: string[];
-    resume?: string[];
-  };
-  /** Optional interactive transport metadata for a native provider UI. */
+  /** One entry per stage where Grid starts or resumes a session with this
+   *  provider. See `AgentPromptEntry`. */
+  prompts: AgentPromptEntry[];
+  /**
+   * A reference to — never a restatement of — this plugin's own
+   * `permissions.spawn` (see `PluginPermissions.spawn` and `PluginSpawn`).
+   * `true` is the only value worth writing: "start me the way my manifest
+   * says". The host's `contributionRefusal` (pluginhost.js) drops a
+   * contribution whose `spawn` (or a restated `bin`/`argv`/`resumeArgv`/
+   * `env`) disagrees with the declared block, because a contributed
+   * payload is signed by nothing and shown to nobody before an install —
+   * only the manifest is. Meaningful only alongside a manifest that
+   * actually declares `permissions.spawn`; absent otherwise.
+   */
+  spawn?: true;
+  /** Optional interactive transport metadata for a provider with its own
+   *  session UI — read by `sessions.js` today for a provider naming the
+   *  `codex-app-server-v2` protocol (codex-provider). Unrelated to
+   *  `permissions.spawn`: a provider can have one, both, or neither. */
   interactive?: {
     mode?: 'terminal' | 'chat';
     approvalPolicy?: 'on-request' | 'never';
