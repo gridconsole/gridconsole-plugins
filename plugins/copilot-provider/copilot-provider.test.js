@@ -135,13 +135,30 @@ test('every argv element is a bare literal or a whole-element placeholder from t
 // The finding this card exists to surface: Copilot refuses `--model auto`
 // together with `--effort <level>` ("Model \"auto\" does not support
 // reasoning effort configuration"), and `--effort` alone fails identically
-// because the default model IS auto. So {effort} must never appear in argv —
-// relying on the dropping rule to omit --model entirely is the only way an
-// unpinned provider can run at all.
-test('argv never sends {effort} — Copilot rejects it beside the auto default', () => {
+// because the default model IS auto. So {effort} must never appear in argv.
+//
+// CORRECTED 2026-09-03 by a live run against a real daemon: this argv also
+// declared `--model {model}`, on the belief that the dropping rule would omit
+// the flag whenever no model was pinned. It never omits it. Core fills
+// `{model}` from the WORKSPACE MATRIX (`sessions.js` `agentConfigFor` — the
+// compute-budget tiles), so the value is always present and is always GRID'S
+// OWN vocabulary: a real session spawned `--model sonnet`, and Copilot answered
+// `Error: Model "sonnet" from --model flag is not available.` Grid's model names
+// are not Copilot's, and the spawn contract has no seam for translating one to
+// the other (`pluginhost.js` SPAWN_KEYS: bin, argv, resumeArgv, env, sessionId,
+// transcript, hooks — no model map). So the flag is not sent at all and Copilot
+// runs on its own default, which is what `--model auto` would have selected
+// anyway. The consequence is real and belongs in the docs rather than hidden
+// here: the compute-budget matrix does not reach a Copilot session.
+test('argv sends neither {effort} nor {model} — Copilot shares neither vocabulary with Grid', () => {
   const spawn = manifest.permissions.spawn;
   assert.ok(!spawn.argv.includes('{effort}'), 'new-session argv must not send {effort}');
   assert.ok(!(spawn.resumeArgv || []).includes('{effort}'), 'resumeArgv must not send {effort}');
+  // The one that cost a live session: `{model}` is filled from Grid's matrix,
+  // not from anything this plugin declares, so sending it sends a name the CLI
+  // has never heard of.
+  assert.ok(!spawn.argv.includes('{model}'), 'new-session argv must not send {model}');
+  assert.ok(!(spawn.resumeArgv || []).includes('{model}'), 'resumeArgv must not send {model}');
 });
 
 test('{sessionId} in a new-session argv is backed by sessionId: "mint-uuid"', () => {

@@ -20,7 +20,6 @@
         "-i", "{prompt}",
         "--session-id", "{sessionId}",
         "--allow-all-tools",
-        "--model", "{model}",
         "--no-auto-update",
         "--no-remote",
         "--no-color"
