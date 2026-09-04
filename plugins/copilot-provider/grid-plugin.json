@@ -48,7 +48,8 @@
           "sessionEnd": "session-end",
           "notification": "notification"
         }
-      }
+      },
+      "trust": "copilot-config"
     }
   },
   "hooks": [],

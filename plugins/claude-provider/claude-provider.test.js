@@ -11,7 +11,11 @@ const STAGES = ['prepare', 'start', 'build', 'review', 'deliver', 'verify'];
 test('manifest parses and matches the design roster', () => {
   assert.match(manifest.id, /^[a-z0-9][a-z0-9-]*$/);
   assert.strictEqual(manifest.id, 'claude-provider');
-  assert.strictEqual(manifest.version, '0.1.0');
+  // 0.2.0 with the spawn contract: `permissions.spawn` is a 0.2 feature, so
+  // the API range has to say so or an older host would load a manifest it
+  // cannot read the most important block of.
+  assert.strictEqual(manifest.version, '0.2.0');
+  assert.strictEqual(manifest.apiVersion, '>=0.2');
   assert.strictEqual(manifest.publisher, 'grid console');
   assert.deepStrictEqual(manifest.points, ['agent.provider', 'llm.provider']);
   assert.deepStrictEqual(manifest.hooks, []);
@@ -67,6 +71,156 @@ test('activate contributes the Claude agent provider descriptor', () => {
   assert.strictEqual(p.commands, undefined, 'command lines are no longer contributed');
   assert.deepStrictEqual(p.prompts.map((s) => s.stage), STAGES);
   assert.strictEqual(ctx.hookRegistrations.length, 0);
+  // A REFERENCE to the signed manifest's block, never a second unsigned copy
+  // of it: core's contributionRefusal drops a payload that restates a spawn or
+  // disagrees with one, because the payload is signed by nothing and was shown
+  // to nobody before the install.
+  assert.strictEqual(p.spawn, true);
+  assert.strictEqual(p.bin, manifest.permissions.spawn.bin);
+});
+
+// ---------------------------------------------------------------------------
+// THE SPAWN CONTRACT — how Grid starts Claude Code, said in the signed
+// manifest rather than in four hundred lines of gridconsole-core.
+//
+// The vocabularies below are transcribed from core's ide/engine/pluginhost.js
+// rather than required — this package does not depend on gridconsole-core — so
+// they stay pinned against the manifest actually written. If core's vocabulary
+// changes, this manifest is what has to change with it, not this list.
+// ---------------------------------------------------------------------------
+
+const SPAWN_KEYS = ['bin', 'argv', 'resumeArgv', 'env', 'sessionId', 'transcript', 'hooks', 'trust'];
+const SPAWN_ARGV_PLACEHOLDERS = ['prompt', 'sessionId', 'cwd', 'model', 'effort', 'cardPath',
+  'agentPerms'];
+const SPAWN_ENV_PLACEHOLDERS = ['stateDir', 'cwd', 'sessionId', 'cardPath', 'accountDir', 'accountId'];
+const SPAWN_TRUST_FILES = ['claude-json', 'copilot-config'];
+const SPAWN_ARGV_LITERAL_RE = /^-{0,2}[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const SPAWN_ARGV_WHOLE_PLACEHOLDER_RE = /^\{([A-Za-z][A-Za-z0-9]*)\}$/;
+const SPAWN_BIN_RE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+
+test('the spawn block names a bare program and only keys the contract closes over', () => {
+  const spawn = manifest.permissions.spawn;
+  assert.ok(spawn, 'grid-plugin.json must declare permissions.spawn');
+  // A BARE NAME AND NOTHING ELSE. Where `claude` lives is the operator's
+  // statement — their PATH, or the `claudeBin` pin in ~/.grid/config.json — and
+  // never this file's: an absolute path spelled in a manifest would let a
+  // plugin point at a file it shipped inside its own bundle.
+  assert.strictEqual(spawn.bin, 'claude');
+  assert.match(spawn.bin, SPAWN_BIN_RE);
+  assert.ok(!spawn.bin.includes('/') && !spawn.bin.includes('.'), 'bin is a bare name, never a path');
+  for (const key of Object.keys(spawn)) {
+    assert.ok(SPAWN_KEYS.includes(key), `"${key}" is not a spawn key the contract knows`);
+  }
+});
+
+test('every argv element is a bare literal or a whole-element placeholder from the closed vocabulary', () => {
+  // argv is exec'd directly with no shell anywhere, so a placeholder has to be
+  // a WHOLE element: whatever it expands to — spaces, quotes, newlines — is one
+  // argv entry, and cannot introduce or erase an argument boundary. Embedded,
+  // a path with a space in it turns one argument into two.
+  for (const key of ['argv', 'resumeArgv']) {
+    const argv = manifest.permissions.spawn[key];
+    assert.ok(Array.isArray(argv) && argv.length, `${key} must say how to start a session`);
+    for (const el of argv) {
+      const asPlaceholder = SPAWN_ARGV_WHOLE_PLACEHOLDER_RE.exec(el);
+      if (asPlaceholder) {
+        assert.ok(SPAWN_ARGV_PLACEHOLDERS.includes(asPlaceholder[1]),
+          `${key} element "${el}" uses a placeholder outside {${SPAWN_ARGV_PLACEHOLDERS.join('} {')}}`);
+        continue;
+      }
+      assert.ok(!el.includes('{') && !el.includes('}'),
+        `${key} element "${el}" embeds a placeholder inside a longer string`);
+      assert.match(el, SPAWN_ARGV_LITERAL_RE, `${key} element "${el}" is not a usable literal argument`);
+    }
+  }
+});
+
+test('the argv sends the card its session, its model and its first turn', () => {
+  const { argv, resumeArgv, sessionId } = manifest.permissions.spawn;
+  // Grid decides the id and hands it over, rather than discovering one after
+  // the fact: the card, the hook file and the transcript all name the same
+  // conversation from the instant the process starts.
+  assert.strictEqual(sessionId, 'mint-uuid');
+  assert.deepStrictEqual(argv.slice(0, 2), ['--session-id', '{sessionId}']);
+  // A card that has run before RESUMES it rather than opening a blank session
+  // beside a transcript the UI is still rendering.
+  assert.deepStrictEqual(resumeArgv.slice(0, 2), ['--resume', '{sessionId}']);
+  // THE DROPPING RULE is what these three pairs are written for: no value means
+  // the element AND the flag before it are removed, never `--model ''`. So an
+  // unset model inherits the CLI's own default, and a card running in place
+  // rather than in a worktree Grid cut sends no `--settings` at all.
+  for (const template of [argv, resumeArgv]) {
+    for (const [flag, ph] of [['--model', '{model}'], ['--effort', '{effort}'],
+      ['--settings', '{agentPerms}']]) {
+      assert.strictEqual(template[template.indexOf(ph) - 1], flag,
+        `${ph} must follow ${flag} so the dropping rule can take both`);
+    }
+    // The prompt is the LAST element and carries no flag of its own: Claude
+    // Code takes an initial prompt positionally, and a new session's is the
+    // card context with the message that started it folded in.
+    assert.strictEqual(template[template.length - 1], '{prompt}');
+  }
+});
+
+test('the env bills the session to its own account and pins the task list to the card', () => {
+  const env = manifest.permissions.spawn.env;
+  // WHICH ANTHROPIC ACCOUNT THIS SESSION BILLS TO. `{accountDir}` is that
+  // account's own config directory and is EMPTY for the primary — which is the
+  // point: the env dropping rule then sets no CLAUDE_CONFIG_DIR at all, and
+  // "no CLAUDE_CONFIG_DIR" is a different auth path from "CLAUDE_CONFIG_DIR
+  // pointed at nothing", because the keychain item is keyed on the directory.
+  assert.strictEqual(env.CLAUDE_CONFIG_DIR, '{accountDir}');
+  // Claude Code keys its task list on this when set, and on the session id
+  // otherwise. Pinning it to the card means the plan belongs to the CARD, so
+  // killing and respawning a session keeps the tasks.
+  assert.strictEqual(env.CLAUDE_CODE_TASK_LIST_ID, '{cardPath}');
+  for (const [name, value] of Object.entries(env)) {
+    assert.match(name, /^[A-Z][A-Z0-9_]*$/, `${name} is not a usable environment variable name`);
+    assert.ok(!/^(LD_|DYLD_|NODE_|BASH_|PERL|PYTHON|RUBY|GIT_|GRID_)/.test(name),
+      `${name} decides what code a process loads, which Grid owns`);
+    for (const [, ph] of [...String(value).matchAll(/\{([^{}]+)\}/g)]) {
+      assert.ok(SPAWN_ENV_PLACEHOLDERS.includes(ph), `{${ph}} is not an env placeholder`);
+    }
+  }
+});
+
+test('the spawn block asks Grid to pre-answer Claude Code\'s own folder-trust prompt', () => {
+  // Claude Code asks "is this a project you created or one you trust?" the
+  // first time it starts somewhere it has never been, and until somebody
+  // answers, NOTHING happens: no SessionStart hook, so the queued kickoff is
+  // never delivered; no transcript, so the pane stays empty; and the card still
+  // reads active, so the board says the agent is working.
+  //
+  // Grid answers it only for a directory the user themselves registered — the
+  // project's own folder, a worktree Grid cut, or the workspace root — and that
+  // boundary lives in core, not here. This word only says WHICH file, because
+  // Claude's is `<CLAUDE_CONFIG_DIR>/.claude.json` and Copilot's is
+  // `<COPILOT_HOME>/config.json`.
+  const { trust } = manifest.permissions.spawn;
+  assert.ok(SPAWN_TRUST_FILES.includes(trust), `"${trust}" is not a trust file core can write`);
+  assert.strictEqual(trust, 'claude-json');
+});
+
+test('the spawn block declares no transcript and no hook file, and that is deliberate', () => {
+  // Both are unexpressible in the contract's path grammar, and both already
+  // have a working answer core owns:
+  //
+  //   * the transcript is `<config dir>/projects/<slugified cwd>/<id>.jsonl`.
+  //     There is no placeholder for that slug, and `{env.CLAUDE_CONFIG_DIR}`
+  //     is dropped entirely on the primary account, so a template would
+  //     resolve to nothing for most users. Grid resolves Claude transcripts
+  //     through claudehome's per-account roots instead.
+  //   * the hook file is the checkout's own `.claude/settings.local.json`, and
+  //     the contract REFUSES a `{cwd}`-rooted hooks file on purpose (Grid does
+  //     not write into a repository to make one of its own features work).
+  //     Grid installs Claude's hooks per workspace and per project already,
+  //     which is a different mechanism from the per-spawn one and runs whether
+  //     a session is starting or not.
+  //
+  // Declaring either would be a promise the file cannot keep. Written down as
+  // a test so the next person to notice they are missing finds the reason.
+  assert.strictEqual(manifest.permissions.spawn.transcript, undefined);
+  assert.strictEqual(manifest.permissions.spawn.hooks, undefined);
 });
 
 test('every stage prompt carries a file path, an arrow and shipped text', () => {

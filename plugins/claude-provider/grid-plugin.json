@@ -1,15 +1,38 @@
 {
   "id": "claude-provider",
   "name": "claude-provider",
-  "version": "0.1.0",
-  "apiVersion": ">=0.1",
+  "version": "0.2.0",
+  "apiVersion": ">=0.2",
   "publisher": "grid console",
   "description": "Sessions through Claude Code, and the stage prompts the default SDLC sends when it starts or resumes one.",
   "permissions": {
     "network": [],
     "cardWrite": false,
     "filesystem": [],
-    "shell": false
+    "shell": false,
+    "spawn": {
+      "bin": "claude",
+      "argv": [
+        "--session-id", "{sessionId}",
+        "--model", "{model}",
+        "--effort", "{effort}",
+        "--settings", "{agentPerms}",
+        "{prompt}"
+      ],
+      "resumeArgv": [
+        "--resume", "{sessionId}",
+        "--model", "{model}",
+        "--effort", "{effort}",
+        "--settings", "{agentPerms}",
+        "{prompt}"
+      ],
+      "env": {
+        "CLAUDE_CONFIG_DIR": "{accountDir}",
+        "CLAUDE_CODE_TASK_LIST_ID": "{cardPath}"
+      },
+      "sessionId": "mint-uuid",
+      "trust": "claude-json"
+    }
   },
   "hooks": [],
   "points": [

@@ -153,6 +153,17 @@ const PROVIDER = {
   id: 'claude',
   name: 'Claude (Claude Code)',
   bin: 'claude',
+  // A reference to the manifest's own `permissions.spawn`, never a restatement
+  // of it — core's contributionRefusal drops a payload that names a spawn its
+  // manifest does not declare, or one that disagrees with it. `spawn: true` is
+  // how a contribution says "start me the way my manifest says" without a
+  // second, unsigned copy of the block a person never saw before installing.
+  //
+  // Core still DISPATCHES `claude` down its own bespoke path; declaring the
+  // contract here is what makes the declared path capable of running it, and
+  // switching the dispatch over is a separate change on purpose, so that a bad
+  // merge of either half stays recoverable.
+  spawn: true,
   prompts: PROMPTS,
 };
 

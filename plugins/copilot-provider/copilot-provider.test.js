@@ -14,8 +14,10 @@ const STAGES = ['prepare', 'start', 'build', 'review', 'deliver', 'verify'];
 // stay pinned against the manifest actually written, not against a moving
 // implementation. If core's vocabulary ever changes, this manifest is the
 // thing that has to change with it, not this list.
-const SPAWN_KEYS = ['bin', 'argv', 'resumeArgv', 'env', 'sessionId', 'transcript', 'hooks'];
-const SPAWN_ARGV_PLACEHOLDERS = ['prompt', 'sessionId', 'cwd', 'model', 'effort', 'cardPath'];
+const SPAWN_KEYS = ['bin', 'argv', 'resumeArgv', 'env', 'sessionId', 'transcript', 'hooks', 'trust'];
+const SPAWN_ARGV_PLACEHOLDERS = ['prompt', 'sessionId', 'cwd', 'model', 'effort', 'cardPath',
+  'agentPerms'];
+const SPAWN_TRUST_FILES = ['claude-json', 'copilot-config'];
 const SPAWN_ARGV_LITERAL_RE = /^-{0,2}[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const SPAWN_ARGV_WHOLE_PLACEHOLDER_RE = /^\{([A-Za-z][A-Za-z0-9]*)\}$/;
 const SPAWN_BIN_RE = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
@@ -108,6 +110,24 @@ test('the spawn block declares only the keys the contract closes over', () => {
   for (const key of Object.keys(spawn)) {
     assert.ok(SPAWN_KEYS.includes(key), `"${key}" is not a spawn key the contract knows`);
   }
+});
+
+// Copilot asks `Confirm folder trust` the first time it starts in a directory
+// it has not seen, and until somebody answers it runs no turn at all: no hook
+// fires, no transcript is written, and Grid's board reports an agent that is
+// working. Grid pre-answers it for the directories the user themselves
+// registered — and it used to do that because core hardcoded this plugin's id.
+// `trust` is the manifest saying it instead, so the engine no longer carries
+// this provider's name; the word names WHICH file, because Claude's is
+// `<CLAUDE_CONFIG_DIR>/.claude.json` and this one is
+// `<COPILOT_HOME>/config.json`'s `trustedFolders`.
+test('the spawn block asks Grid to pre-answer Copilot\'s own folder-trust prompt', () => {
+  const { trust } = manifest.permissions.spawn;
+  assert.ok(SPAWN_TRUST_FILES.includes(trust), `"${trust}" is not a trust file core can write`);
+  assert.strictEqual(trust, 'copilot-config');
+  // The file it names is rooted in this block's own COPILOT_HOME, which is
+  // inside Grid's state dir — never the user's real ~/.copilot.
+  assert.match(manifest.permissions.spawn.env.COPILOT_HOME, /^\{stateDir\}\//);
 });
 
 // Every argv element is either a literal flag/word, or a WHOLE-ELEMENT

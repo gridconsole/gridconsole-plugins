@@ -125,9 +125,25 @@ export type SpawnBin = string;
  *  `"--dir={cwd}"` is refused — because argv is exec'd directly with no
  *  shell, and only a whole-element substitution cannot change the SHAPE of
  *  the command line (whatever `{cwd}` expands to, spaces and all, is one
- *  argv entry). */
+ *  argv entry).
+ *
+ *  NOT HERE: `{accountDir}`/`{accountId}`. No agent CLI seen so far takes the
+ *  account on its command line — see `SpawnEnvPlaceholder` and
+ *  `SpawnPathTemplate`, which do admit them.
+ *
+ *  `{agentPerms}` IS THE ONE PLACEHOLDER CORE HAS A SIDE EFFECT FOR: it is
+ *  the absolute path of the per-card permission file Grid mints (the rows its
+ *  /security page mediates, rebuilt at every spawn from the stage, the
+ *  project's grid.toml and the thread's commit mode), and NAMING IT IS WHAT
+ *  ASKS FOR IT — the file is written only when an argv template spells it.
+ *  The document is a settings file in Claude Code's `--settings` shape, i.e.
+ *  `claude-compatible` in exactly the sense `SpawnHookShape` is, so a CLI that
+ *  cannot read that shape should not name it. A card running in the project's
+ *  own checkout rather than a worktree Grid cut has no such file, and the
+ *  dropping rule below then takes the flag in front of it away too. */
 export type SpawnArgvPlaceholder =
-  | '{prompt}' | '{sessionId}' | '{cwd}' | '{model}' | '{effort}' | '{cardPath}';
+  | '{prompt}' | '{sessionId}' | '{cwd}' | '{model}' | '{effort}' | '{cardPath}'
+  | '{agentPerms}';
 
 /**
  * One `argv`/`resumeArgv` element: EITHER a whole-element placeholder from
@@ -146,17 +162,36 @@ export type SpawnArgvPlaceholder =
  * string, never the literal text `"{model}"`. So `["--model", "{model}"]`
  * with no model configured contributes NO FLAG AT ALL, rather than
  * `--model ''`. `{prompt}` and `{cwd}` always have a value; `{sessionId}`
- * does whenever `sessionId: "mint-uuid"` is declared; `{model}`, `{effort}`
- * and `{cardPath}` routinely do not. It exists because `@github/copilot`
- * 1.0.82 refuses `--model auto` beside `--effort <level>`.
+ * does whenever `sessionId: "mint-uuid"` is declared; `{model}`, `{effort}`,
+ * `{cardPath}` and `{agentPerms}` routinely do not. It exists because
+ * `@github/copilot` 1.0.82 refuses `--model auto` beside `--effort <level>`.
  */
 export type SpawnArgvElement = SpawnArgvPlaceholder | (string & {});
 
 /** Placeholders an ENV VALUE may use — embeddable, unlike argv's, because an
  *  env value is one string with no argument boundary to break. `{env.X}`
  *  is refused here: one env value referring to another is a dependency
- *  graph, and nothing needs one. */
-export type SpawnEnvPlaceholder = '{stateDir}' | '{cwd}' | '{sessionId}' | '{cardPath}';
+ *  graph, and nothing needs one.
+ *
+ *  `{accountDir}` is the config directory of the account a session bills to,
+ *  and `''` for the primary — so `"CLAUDE_CONFIG_DIR": "{accountDir}"` bills
+ *  a provider's own agent to whichever account the session is running under,
+ *  the same way Grid's own Claude spawn already does. `{accountId}` is that
+ *  account's id (`'default'` for the primary), for a manifest that wants a
+ *  stable per-account subdirectory instead — `"COPILOT_HOME":
+ *  "{stateDir}/accounts/{accountId}"`.
+ *
+ *  THE ENV DROPPING RULE: a value naming an account placeholder this install
+ *  has no value for is omitted ENTIRELY — the whole variable, never an empty
+ *  string, because on the primary account "no `CLAUDE_CONFIG_DIR` at all" is
+ *  a different auth path from "`CLAUDE_CONFIG_DIR` pointed at nothing" (the
+ *  keychain item is keyed on the directory). Every OTHER placeholder still
+ *  fails loud: a value naming `{stateDir}`, `{cwd}`, `{sessionId}` or
+ *  `{cardPath}` with nothing to fill it is a manifest expecting an install
+ *  this is not, and that refuses rather than resolving with a hole in it. */
+export type SpawnEnvPlaceholder =
+  | '{stateDir}' | '{cwd}' | '{sessionId}' | '{cardPath}'
+  | '{accountDir}' | '{accountId}';
 
 /** An environment variable NAME a plugin may set: `/^[A-Z][A-Z0-9_]*$/`.
  *  Denied outright: `PATH SHELL IFS ENV PS4 PAGER EDITOR VISUAL CLASSPATH
@@ -185,9 +220,22 @@ export type SpawnSessionId = 'mint-uuid';
  * `{env.NAME}` naming a key this same spawn block's own `env` sets. A
  * literal `/` root is refused: this file is read by Grid and rendered into
  * a card, so a plugin may not root it anywhere on disk. Interior
- * placeholders may additionally use `{sessionId}`. TypeScript cannot check
- * the "starts with" or ".." rules; `readPathTemplate` in pluginhost.js is
- * the real gate.
+ * placeholders may additionally use `{sessionId}`, `{accountId}` and
+ * `{accountDir}`.
+ *
+ * `{accountId}` is the account a session bills to (`'default'` for the
+ * primary), so a manifest can give each account its own subtree —
+ * `{stateDir}/accounts/{accountId}/…` — without ever seeing that account's
+ * actual config directory. `{accountDir}` is admitted for the manifest that
+ * genuinely wants it, but NEITHER account placeholder may be the ROOT:
+ * `{accountDir}` is empty on the primary account, and unlike an env value a
+ * path cannot be dropped when it comes out empty — a root that can be empty
+ * is a path that can point at `{stateDir}`'s own parent. A path naming an
+ * account placeholder it has no value for fails loudly rather than resolving
+ * with a hole in it.
+ *
+ * TypeScript cannot check the "starts with" or ".." rules;
+ * `readPathTemplate` in pluginhost.js is the real gate.
  */
 export type SpawnPathTemplate = string;
 
@@ -260,8 +308,35 @@ export interface SpawnHooks {
 }
 
 /**
+ * The folder-trust prompt Grid pre-answers on the user's behalf before this
+ * agent's first session in a directory, named by the file it lives in.
+ *
+ * Both agents Grid ships stop dead the first time they start somewhere they
+ * have not been — Claude Code asks "is this a project you created or one you
+ * trust?", `@github/copilot` asks `Confirm folder trust` — and until somebody
+ * answers, the session fires no hook, writes no transcript and does no work
+ * while the board reports an agent that is working.
+ *
+ * A WORD RATHER THAN A BOOLEAN, because the two keep the answer in two
+ * different files in two different shapes, rooted in two different variables:
+ * `claude-json` is `<CLAUDE_CONFIG_DIR>/.claude.json`'s
+ * `projects[dir].hasTrustDialogAccepted` (and an ABSENT `CLAUDE_CONFIG_DIR`
+ * means the primary account's `~/.claude.json`); `copilot-config` is
+ * `<COPILOT_HOME>/config.json`'s `trustedFolders`. A manifest cannot describe
+ * either write — it is a merge into another program's config, not an argv —
+ * so it NAMES one core already knows how to make, exactly as
+ * `SpawnHookShape` names a file layout the installer knows how to write.
+ *
+ * THE SECURITY BOUNDARY IS NOT YOURS TO WIDEN. Grid asserts trust only for a
+ * directory the user themselves typed into it: the project's own configured
+ * folder, a worktree Grid cut, or the workspace root. Any other working
+ * directory is refused and the agent's dialog stands.
+ */
+export type SpawnTrustFile = 'claude-json' | 'copilot-config';
+
+/**
  * `permissions.spawn` itself — the whole contract a manifest may declare.
- * Keys are closed to the seven below; an unknown key is a load error, not a
+ * Keys are closed to the eight below; an unknown key is a load error, not a
  * silently ignored one. Read through `spawnOf(manifest)`
  * (gridconsole-core:ide/engine/pluginhost.js), which answers `null` for the
  * ordinary case of a plugin that spawns nothing.
@@ -283,6 +358,9 @@ export interface PluginSpawn {
   sessionId?: SpawnSessionId;
   transcript?: SpawnTranscript;
   hooks?: SpawnHooks;
+  /** Absent — the ordinary case — means Grid writes nothing and this agent's
+   *  own folder-trust prompt stands wherever it would have stood. */
+  trust?: SpawnTrustFile;
 }
 
 /** When a plugin wakes up: `stage:deliver`, `view:board`, `command:<id>`.
