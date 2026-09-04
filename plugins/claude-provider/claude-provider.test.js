@@ -91,7 +91,7 @@ test('activate contributes the Claude agent provider descriptor', () => {
 
 const SPAWN_KEYS = ['bin', 'argv', 'resumeArgv', 'env', 'sessionId', 'transcript', 'hooks', 'trust'];
 const SPAWN_ARGV_PLACEHOLDERS = ['prompt', 'sessionId', 'cwd', 'model', 'effort', 'cardPath',
-  'agentPerms'];
+  'agentPerms', 'permissionMode'];
 const SPAWN_ENV_PLACEHOLDERS = ['stateDir', 'cwd', 'sessionId', 'cardPath', 'accountDir', 'accountId'];
 const SPAWN_TRUST_FILES = ['claude-json', 'copilot-config'];
 const SPAWN_ARGV_LITERAL_RE = /^-{0,2}[A-Za-z0-9][A-Za-z0-9._-]*$/;
