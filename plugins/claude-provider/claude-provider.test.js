@@ -89,7 +89,7 @@ test('activate contributes the Claude agent provider descriptor', () => {
 // changes, this manifest is what has to change with it, not this list.
 // ---------------------------------------------------------------------------
 
-const SPAWN_KEYS = ['bin', 'argv', 'resumeArgv', 'env', 'sessionId', 'transcript', 'hooks', 'trust'];
+const SPAWN_KEYS = ['bin', 'argv', 'resumeArgv', 'forkArgv', 'env', 'sessionId', 'transcript', 'hooks', 'trust'];
 const SPAWN_ARGV_PLACEHOLDERS = ['prompt', 'sessionId', 'cwd', 'model', 'effort', 'cardPath',
   'agentPerms', 'permissionMode'];
 const SPAWN_ENV_PLACEHOLDERS = ['stateDir', 'cwd', 'sessionId', 'cardPath', 'accountDir', 'accountId'];
@@ -118,7 +118,7 @@ test('every argv element is a bare literal or a whole-element placeholder from t
   // a WHOLE element: whatever it expands to — spaces, quotes, newlines — is one
   // argv entry, and cannot introduce or erase an argument boundary. Embedded,
   // a path with a space in it turns one argument into two.
-  for (const key of ['argv', 'resumeArgv']) {
+  for (const key of ['argv', 'resumeArgv', 'forkArgv']) {
     const argv = manifest.permissions.spawn[key];
     assert.ok(Array.isArray(argv) && argv.length, `${key} must say how to start a session`);
     for (const el of argv) {
@@ -136,7 +136,7 @@ test('every argv element is a bare literal or a whole-element placeholder from t
 });
 
 test('the argv sends the card its session, its model and its first turn', () => {
-  const { argv, resumeArgv, sessionId } = manifest.permissions.spawn;
+  const { argv, resumeArgv, forkArgv, sessionId } = manifest.permissions.spawn;
   // Grid decides the id and hands it over, rather than discovering one after
   // the fact: the card, the hook file and the transcript all name the same
   // conversation from the instant the process starts.
@@ -145,11 +145,15 @@ test('the argv sends the card its session, its model and its first turn', () => 
   // A card that has run before RESUMES it rather than opening a blank session
   // beside a transcript the UI is still rendering.
   assert.deepStrictEqual(resumeArgv.slice(0, 2), ['--resume', '{sessionId}']);
+  // Forking a card resumes the SAME id too, but as a new conversation branched
+  // off it — never a blank one — so it starts from `--resume` exactly like
+  // resumeArgv, with `--fork-session` right after the id.
+  assert.deepStrictEqual(forkArgv.slice(0, 3), ['--resume', '{sessionId}', '--fork-session']);
   // THE DROPPING RULE is what these three pairs are written for: no value means
   // the element AND the flag before it are removed, never `--model ''`. So an
   // unset model inherits the CLI's own default, and a card running in place
   // rather than in a worktree Grid cut sends no `--settings` at all.
-  for (const template of [argv, resumeArgv]) {
+  for (const template of [argv, resumeArgv, forkArgv]) {
     for (const [flag, ph] of [['--model', '{model}'], ['--effort', '{effort}'],
       ['--settings', '{agentPerms}']]) {
       assert.strictEqual(template[template.indexOf(ph) - 1], flag,
@@ -160,6 +164,18 @@ test('the argv sends the card its session, its model and its first turn', () => 
     // card context with the message that started it folded in.
     assert.strictEqual(template[template.length - 1], '{prompt}');
   }
+});
+
+test('forkArgv is resumeArgv with exactly one element inserted: --fork-session', () => {
+  const { resumeArgv, forkArgv } = manifest.permissions.spawn;
+  // Anything more or less than this one flag is a different contract than the
+  // "resume this id, but forked" promise forkArgv exists to make.
+  const withoutFork = forkArgv.filter((el) => el !== '--fork-session');
+  assert.deepStrictEqual(withoutFork, resumeArgv,
+    'forkArgv must equal resumeArgv once --fork-session is removed');
+  assert.strictEqual(forkArgv.length, resumeArgv.length + 1,
+    'forkArgv must differ from resumeArgv by exactly one element');
+  assert.strictEqual(forkArgv.filter((el) => el === '--fork-session').length, 1);
 });
 
 test('the env bills the session to its own account, and does not fight core for the task list', () => {

@@ -92,8 +92,8 @@ export interface PluginPermissions {
    * host refuses unless acknowledged — so v1 shipping `copilot` cannot
    * quietly become v2 shipping `curl`). A contributed `agent.provider`
    * payload may only REFERENCE this block (`spawn: true`) — the host drops
-   * a contribution whose `spawn`, `bin`, `argv`, `resumeArgv` or `env`
-   * disagrees with what is declared here. See `AgentProviderPayload.spawn`.
+   * a contribution whose `spawn`, `bin`, `argv`, `resumeArgv`, `forkArgv` or
+   * `env` disagrees with what is declared here. See `AgentProviderPayload.spawn`.
    *
    * See `plugins/copilot-provider/grid-plugin.json` in this repo for a real,
    * accepted spawn contract — it is the closest thing to a worked example
@@ -352,6 +352,9 @@ export interface PluginSpawn {
   /** Same element rules as `argv`. Absent means this provider can only
    *  start fresh — there is no resume shape. */
   resumeArgv?: SpawnArgvElement[];
+  /** Same element rules as `argv`: resume the id given, but forked into a
+   *  new conversation. Absent means this provider cannot fork. */
+  forkArgv?: SpawnArgvElement[];
   /** At most 16 entries — see `SpawnEnv`. */
   env?: SpawnEnv;
   /** Absent means the CLI picks its own id. */
@@ -600,7 +603,7 @@ export interface AgentProviderPayload {
    * `true` is the only value worth writing: "start me the way my manifest
    * says". The host's `contributionRefusal` (pluginhost.js) drops a
    * contribution whose `spawn` (or a restated `bin`/`argv`/`resumeArgv`/
-   * `env`) disagrees with the declared block, because a contributed
+   * `forkArgv`/`env`) disagrees with the declared block, because a contributed
    * payload is signed by nothing and shown to nobody before an install —
    * only the manifest is. Meaningful only alongside a manifest that
    * actually declares `permissions.spawn`; absent otherwise.

@@ -28,6 +28,15 @@
         "--settings", "{agentPerms}",
         "{prompt}"
       ],
+      "forkArgv": [
+        "--resume", "{sessionId}",
+        "--fork-session",
+        "--model", "{model}",
+        "--effort", "{effort}",
+        "--permission-mode", "{permissionMode}",
+        "--settings", "{agentPerms}",
+        "{prompt}"
+      ],
       "env": {
         "CLAUDE_CONFIG_DIR": "{accountDir}"
       },
