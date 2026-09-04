@@ -27,8 +27,7 @@
         "{prompt}"
       ],
       "env": {
-        "CLAUDE_CONFIG_DIR": "{accountDir}",
-        "CLAUDE_CODE_TASK_LIST_ID": "{cardPath}"
+        "CLAUDE_CONFIG_DIR": "{accountDir}"
       },
       "sessionId": "mint-uuid",
       "trust": "claude-json"

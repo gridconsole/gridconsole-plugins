@@ -162,7 +162,7 @@ test('the argv sends the card its session, its model and its first turn', () => 
   }
 });
 
-test('the env bills the session to its own account and pins the task list to the card', () => {
+test('the env bills the session to its own account, and does not fight core for the task list', () => {
   const env = manifest.permissions.spawn.env;
   // WHICH ANTHROPIC ACCOUNT THIS SESSION BILLS TO. `{accountDir}` is that
   // account's own config directory and is EMPTY for the primary — which is the
@@ -170,10 +170,14 @@ test('the env bills the session to its own account and pins the task list to the
   // "no CLAUDE_CONFIG_DIR" is a different auth path from "CLAUDE_CONFIG_DIR
   // pointed at nothing", because the keychain item is keyed on the directory.
   assert.strictEqual(env.CLAUDE_CONFIG_DIR, '{accountDir}');
-  // Claude Code keys its task list on this when set, and on the session id
-  // otherwise. Pinning it to the card means the plan belongs to the CARD, so
-  // killing and respawning a session keeps the tasks.
-  assert.strictEqual(env.CLAUDE_CODE_TASK_LIST_ID, '{cardPath}');
+  // NOT CLAUDE_CODE_TASK_LIST_ID. Core's own shared spawn env already sets it,
+  // unconditionally, to the card's slug — for every provider, not only this
+  // one — because it is what `activity.js`'s task-list dock has always keyed
+  // its fallback on, and a manifest naming its own value here would only ever
+  // lose to core's (sessions.js logs "which Grid owns" and drops it) or, if it
+  // ever won, point the dock at a directory the fallback does not know to
+  // look in. Grid owns this concept; the manifest does not restate it.
+  assert.strictEqual(env.CLAUDE_CODE_TASK_LIST_ID, undefined);
   for (const [name, value] of Object.entries(env)) {
     assert.match(name, /^[A-Z][A-Z0-9_]*$/, `${name} is not a usable environment variable name`);
     assert.ok(!/^(LD_|DYLD_|NODE_|BASH_|PERL|PYTHON|RUBY|GIT_|GRID_)/.test(name),
