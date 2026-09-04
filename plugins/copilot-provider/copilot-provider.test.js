@@ -59,6 +59,16 @@ test('stability is unstable with a real note about what is unproven', () => {
     'the note must say what is actually unproven');
 });
 
+// [1/1]'s finding: Copilot's OAuth token lives in the OS keychain under a
+// fixed service name, unreachable through a per-account COPILOT_HOME — so
+// two Grid accounts on this provider are not isolated, and the manifest has
+// to say so rather than let core assume otherwise. gridconsole-core's
+// `sessions.js` (`_isolationRefusal`, [1/13]) reads exactly this word, off
+// the signed manifest, to serialize this provider's sessions.
+test('capabilities.isolation is "none" — the credential this provider spawns with is not per-account', () => {
+  assert.strictEqual(manifest.capabilities.isolation, 'none');
+});
+
 test('activate contributes a Copilot provider descriptor that only references the spawn permission', () => {
   const ctx = fakePluginContext(manifest);
   plugin.activate(ctx);

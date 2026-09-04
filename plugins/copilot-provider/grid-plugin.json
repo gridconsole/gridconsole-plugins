@@ -9,6 +9,9 @@
     "level": "unstable",
     "note": "Two things are unproven: the stage prompts, written for this provider rather than transcribed from either sibling, and the session surface itself — spawn, transcript and hooks all riding the 0.2 contract for its first real consumer — which has had no use inside a running Grid workspace yet."
   },
+  "capabilities": {
+    "isolation": "none"
+  },
   "permissions": {
     "network": [],
     "cardWrite": false,
