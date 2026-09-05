@@ -143,7 +143,7 @@ export type SpawnBin = string;
  *  dropping rule below then takes the flag in front of it away too. */
 export type SpawnArgvPlaceholder =
   | '{prompt}' | '{sessionId}' | '{cwd}' | '{model}' | '{effort}' | '{cardPath}'
-  | '{agentPerms}';
+  | '{agentPerms}' | '{permissionMode}';
 
 /**
  * One `argv`/`resumeArgv` element: EITHER a whole-element placeholder from
@@ -163,8 +163,10 @@ export type SpawnArgvPlaceholder =
  * with no model configured contributes NO FLAG AT ALL, rather than
  * `--model ''`. `{prompt}` and `{cwd}` always have a value; `{sessionId}`
  * does whenever `sessionId: "mint-uuid"` is declared; `{model}`, `{effort}`,
- * `{cardPath}` and `{agentPerms}` routinely do not. It exists because
- * `@github/copilot` 1.0.82 refuses `--model auto` beside `--effort <level>`.
+ * `{cardPath}`, `{agentPerms}` and `{permissionMode}` routinely do not
+ * (`{permissionMode}` is filled from the card's permission mode and is absent
+ * when none is set). It exists because `@github/copilot` 1.0.82 refuses
+ * `--model auto` beside `--effort <level>`.
  */
 export type SpawnArgvElement = SpawnArgvPlaceholder | (string & {});
 
