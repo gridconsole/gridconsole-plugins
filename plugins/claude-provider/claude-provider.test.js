@@ -80,6 +80,65 @@ test('activate contributes the Claude agent provider descriptor', () => {
 });
 
 // ---------------------------------------------------------------------------
+// CAPABILITIES — the two answers core cannot find out for itself, read off
+// the signed manifest by gridconsole-core's sessions.js (`_isolationRefusal`,
+// `_holdAccountAfterExit`) with no provider id anywhere in that code.
+// ---------------------------------------------------------------------------
+
+const ERROR_KINDS = ['retryable', 'rate_limited', 'auth_failed', 'fatal'];
+
+test('capabilities.isolation is "env" — CLAUDE_CONFIG_DIR relocates the whole credential per account', () => {
+  assert.strictEqual(manifest.capabilities.isolation, 'env');
+  assert.deepStrictEqual(Object.keys(manifest.capabilities).sort(), ['errors', 'isolation']);
+});
+
+test('capabilities.errors is a four-class table of compiling, case-insensitive patterns', () => {
+  const errors = manifest.capabilities.errors;
+  assert.deepStrictEqual(Object.keys(errors).sort(), [...ERROR_KINDS].sort());
+  for (const kind of ERROR_KINDS) {
+    assert.ok(Array.isArray(errors[kind]), `${kind} is an array`);
+    for (const source of errors[kind]) {
+      assert.strictEqual(typeof source, 'string');
+      assert.doesNotThrow(() => new RegExp(source, 'i'), `${kind}: ${source} compiles`);
+    }
+  }
+});
+
+/** The first class in core's precedence order whose patterns hit `text`. */
+function classify(text) {
+  for (const kind of ['rate_limited', 'auth_failed', 'fatal', 'retryable']) {
+    for (const source of manifest.capabilities.errors[kind]) {
+      const m = new RegExp(source, 'i').exec(text);
+      if (m) return { kind, until: (m.groups && m.groups.until) || '' };
+    }
+  }
+  return { kind: 'unknown', until: '' };
+}
+
+// The lines are what Claude Code 2.1.261 actually prints (read off the
+// binary's own strings, and its own list of Anthropic API failure text:
+// "401", "Invalid API key", "Please run /login", "rate limited",
+// "overloaded", "529", "credit balance too low", "usage limit reached").
+test('the table classifies the lines Claude Code really prints', () => {
+  assert.strictEqual(classify('Usage limit reached · continuing shortly · esc to cancel').kind, 'rate_limited');
+  assert.deepStrictEqual(classify('Usage limit reached · resets 3pm (Europe/London)'), { kind: 'rate_limited', until: '3pm (Europe/London)' });
+  assert.strictEqual(classify('you have reached your weekly usage limit').kind, 'rate_limited');
+  assert.strictEqual(classify('new messages wait for your usage limit to reset').kind, 'rate_limited');
+  assert.strictEqual(classify('API Error: 429 {"type":"rate_limit_error"}').kind, 'rate_limited');
+  assert.strictEqual(classify('Not logged in · Run /login').kind, 'auth_failed');
+  assert.strictEqual(classify('Login expired · Please run /login').kind, 'auth_failed');
+  assert.strictEqual(classify('Invalid API key · Please run /login').kind, 'auth_failed');
+  assert.strictEqual(classify('API Error: 401 authentication_error').kind, 'auth_failed');
+  assert.strictEqual(classify('{"type":"overloaded_error"}').kind, 'retryable');
+  assert.strictEqual(classify('API Error: 529 Overloaded').kind, 'retryable');
+  assert.strictEqual(classify('TypeError: fetch failed (ECONNRESET)').kind, 'retryable');
+  assert.strictEqual(classify('Your credit balance is too low to access the Anthropic API').kind, 'fatal');
+  // Ordinary output is not an error.
+  assert.strictEqual(classify('Welcome to Claude Code!').kind, 'unknown');
+  assert.strictEqual(classify('').kind, 'unknown');
+});
+
+// ---------------------------------------------------------------------------
 // THE SPAWN CONTRACT — how Grid starts Claude Code, said in the signed
 // manifest rather than in four hundred lines of gridconsole-core.
 //

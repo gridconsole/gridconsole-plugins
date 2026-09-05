@@ -5,6 +5,42 @@
   "apiVersion": ">=0.2",
   "publisher": "grid console",
   "description": "Sessions through Claude Code, and the stage prompts the default SDLC sends when it starts or resumes one.",
+  "capabilities": {
+    "isolation": "env",
+    "errors": {
+      "rate_limited": [
+        "usage limit reached(?:[^\\n]*?\\bresets? (?:at |in )?(?<until>[^\\n·]+))?",
+        "reached your (?:weekly |session )?usage limit",
+        "wait for your usage limit to reset",
+        "you've hit your (?:usage )?limit",
+        "rate[ _-]?limit(?:ed|_error)?\\b",
+        "\\b429\\b"
+      ],
+      "auth_failed": [
+        "not logged in",
+        "please run /login",
+        "run /login",
+        "login expired",
+        "authentication failed",
+        "authentication[ _]error",
+        "invalid api key",
+        "oauth token (?:has )?(?:expired|revoked|is invalid)",
+        "\\b401\\b"
+      ],
+      "retryable": [
+        "overloaded(?:_error)?",
+        "\\b529\\b",
+        "\\b5(?:00|02|03|04)\\b",
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "ETIMEDOUT",
+        "fetch failed"
+      ],
+      "fatal": [
+        "credit balance (?:is )?too low"
+      ]
+    }
+  },
   "permissions": {
     "network": [],
     "cardWrite": false,

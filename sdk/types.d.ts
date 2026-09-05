@@ -366,6 +366,66 @@ export interface PluginSpawn {
   trust?: SpawnTrustFile;
 }
 
+// ---------------------------------------------------------------------------
+// CAPABILITIES — `capabilities`, a provider's own honest answers to the two
+// questions core cannot find out for itself: can two of your accounts share
+// one machine, and what does your failure text mean. Both ride in the signed
+// manifest for the same three reasons `permissions.spawn` does (signed,
+// shown, comparable): a claim about isolation or about which line means
+// "rate limited" is exactly the kind of claim a hostile or merely wrong
+// contribution would get wrong, and core acts on the word, generically —
+// nothing in gridconsole-core names a provider id when it reads these.
+// ---------------------------------------------------------------------------
+
+/**
+ * Can two Grid accounts of this provider run on one machine without one's
+ * credential clobbering the other's? `'env'`: yes, a per-account variable
+ * relocates the whole credential (Claude Code's `CLAUDE_CONFIG_DIR`).
+ * `'filesystem'`: yes, but only by swapping files under a fixed path.
+ * `'none'`: no — the credential sits somewhere no variable moves (Copilot's
+ * keychain item), and core serializes this provider's sessions rather than
+ * let two accounts share one login. Absent means nobody has answered yet,
+ * which core reads as "nothing to degrade", never as any of the three.
+ */
+export type PluginIsolation = 'env' | 'filesystem' | 'none';
+
+/**
+ * The closed vocabulary a provider's failure text is mapped onto —
+ * `classifyError` in gridconsole-core:ide/engine/pluginhost.js. `rate_limited`
+ * and `auth_failed` hold the ACCOUNT the session billed to out of the
+ * rotation (until the reset the text named, or a bounded default);
+ * `retryable` and `fatal` are read but change nothing yet. `unknown` is what
+ * core answers when nothing matches; it is not a class a manifest declares.
+ */
+export type PluginErrorKind = 'retryable' | 'rate_limited' | 'auth_failed' | 'fatal';
+
+/**
+ * `capabilities.errors` — what this provider prints when it fails, as regex
+ * SOURCE strings (not RegExp objects: this is JSON), matched
+ * case-insensitively against whatever the process wrote before it exited.
+ * Each class is an array; an absent class is empty. When several classes
+ * match one text, `rate_limited` wins over `auth_failed` over `fatal` over
+ * `retryable`. A `rate_limited` pattern may carry a named group `until` —
+ * `"usage limit reached(?: until (?<until>[^\n]+))?"` — whose capture core
+ * parses as a date, a span ("5 minutes", "2h") or a clock time ("3pm"); a
+ * capture it cannot parse, or no capture at all, holds the account for
+ * core's default cooldown (five minutes). A key outside `PluginErrorKind`,
+ * a value that is not an array, a pattern that is not a string, or one that
+ * does not compile as a RegExp is a load error, so a typo is refused by
+ * name rather than silently classifying nothing.
+ *
+ * See `plugins/claude-provider/grid-plugin.json` in this repo for a real,
+ * accepted table.
+ */
+export type PluginErrorTable = Partial<Record<PluginErrorKind, string[]>>;
+
+/** The `capabilities` block. Keys are closed to the two below; an unknown
+ *  key is a load error. Absent means neither question has been answered. */
+export interface PluginCapabilities {
+  isolation?: PluginIsolation;
+  errors?: PluginErrorTable;
+}
+
 /** When a plugin wakes up: `stage:deliver`, `view:board`, `command:<id>`.
  *  Parsed and shown today; every enabled plugin still activates at boot. */
 export type ActivationEvent = `stage:${string}` | `view:${string}` | `command:${string}`;
@@ -386,6 +446,11 @@ export interface PluginManifest {
   /** Explicit and narrow. A legacy string array still parses and grants
    *  nothing, because those strings never had a vocabulary behind them. */
   permissions?: PluginPermissions | string[];
+  /** The provider's own answers about isolation and failure text — see
+   *  `PluginCapabilities`. Only meaningful on a plugin that declares
+   *  `permissions.spawn`; read off the signed manifest, never off a
+   *  contributed payload. */
+  capabilities?: PluginCapabilities;
   /** Every name passed to `hooks.on` must be declared here. */
   hooks?: HookName[];
   /** Every point passed to `contribute` must be declared here. */
