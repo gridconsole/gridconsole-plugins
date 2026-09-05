@@ -237,6 +237,26 @@ test('hooks.events maps Copilot\'s own event names onto Grid\'s vocabulary, in t
   assert.strictEqual(events.agentStop, 'stop');
 });
 
+// The other half of the map: the KEYS have to be names the binary actually
+// fires, and a key it does not know is silent — Copilot reads the file, finds
+// no such event, and runs nothing, which on the board is a card that never
+// leaves `active`. This is the list of hook event names GitHub Copilot CLI
+// documents, transcribed from @github/copilot 1.0.83 on 2026-09-05 (the
+// version that ran the live probes on that date). Transcribed rather than
+// read from the binary because the binary is not on a test machine; when a
+// release renames or adds one, this list is where the change is recorded,
+// and the manifest moves with it.
+const COPILOT_HOOK_EVENTS_1_0_83 = ['sessionStart', 'agentStop', 'userPromptSubmitted',
+  'preToolUse', 'postToolUse', 'sessionEnd', 'notification'];
+
+test('every declared hook event name is one @github/copilot 1.0.83 documents', () => {
+  const { events } = manifest.permissions.spawn.hooks;
+  for (const name of Object.keys(events)) {
+    assert.ok(COPILOT_HOOK_EVENTS_1_0_83.includes(name),
+      `hooks.events.${name} is not a hook event Copilot CLI 1.0.83 fires — one of ${COPILOT_HOOK_EVENTS_1_0_83.join(', ')}`);
+  }
+});
+
 // --- the wording -------------------------------------------------------
 
 test('the acting stages say the work is already authorized', () => {
