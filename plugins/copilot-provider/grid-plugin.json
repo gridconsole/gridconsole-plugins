@@ -20,6 +20,7 @@
     "spawn": {
       "bin": "copilot",
       "argv": [
+        "-C", "{cwd}",
         "-i", "{prompt}",
         "--session-id", "{sessionId}",
         "--allow-all-tools",
@@ -27,7 +28,7 @@
         "--no-remote",
         "--no-color"
       ],
-      "resumeArgv": ["--resume", "{sessionId}"],
+      "resumeArgv": ["-C", "{cwd}", "--resume", "{sessionId}"],
       "env": { "COPILOT_HOME": "{stateDir}/copilot-home" },
       "sessionId": "mint-uuid",
       "transcript": {
