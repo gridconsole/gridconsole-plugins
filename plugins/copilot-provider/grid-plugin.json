@@ -7,7 +7,7 @@
   "description": "Sessions through GitHub Copilot CLI, and the stage prompts the default SDLC sends when it starts or resumes one.",
   "stability": {
     "level": "unstable",
-    "note": "Run live once, on 2026-09-04 against @github/copilot 1.0.83: spawning works and a card reached prepare with a live session. Its transcript does not render as chat yet, a refused second session is only visible from a hand-started one, and the stage prompts themselves are unproven."
+    "note": "Run live on 2026-09-04 and 2026-09-05 against @github/copilot 1.0.83: spawning works, the transcript renders as chat, a refused second session shows on the card and idle latches through its hooks. The stage prompts themselves are unproven, and a session asked to read a file outside its cwd blocks on Copilot's path-permission prompt until someone answers it."
   },
   "capabilities": {
     "isolation": "none"
