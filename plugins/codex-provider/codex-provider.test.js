@@ -5,6 +5,16 @@ const { fakePluginContext } = require('../../sdk/index.js');
 const manifest = require('./grid-plugin.json');
 const plugin = require('./index.js');
 
+test('provider contract: Deliver owns the whole-suite run and Verify consumes its recorded result', () => {
+  const verify = plugin.PROMPTS.find((p) => p.stage === 'verify').default;
+  const build = plugin.PROMPTS.find((p) => p.stage === 'build').default;
+  assert.match(verify, /grid verify status/);
+  assert.match(verify, /never run the whole suite yourself/);
+  assert.match(verify, /Only when relevant code changed/);
+  assert.match(build, /Grid runs the whole suite once in Deliver/);
+  assert.doesNotMatch(build, /whole suite[^.]*Verify’s job/);
+});
+
 /** The six stages Grid starts or resumes an agent in, in pipeline order. */
 const STAGES = ['prepare', 'start', 'build', 'review', 'deliver', 'verify'];
 
@@ -126,7 +136,8 @@ test('prepare asks for the same seven plan sections Claude asks for', () => {
   assert.ok(prepare.includes('"### Questions asked"'));
   // The picker paragraph is the one that had to be rewritten: a question here
   // is a message, not a tool call.
-  assert.match(prepare, /Ask clarifying questions in the conversation/);
+  assert.match(prepare, /Ask clarifying questions with the Grid question command/);
+  assert.match(prepare, /grid question ask/);
 });
 
 test('build pins the task-list discipline the board reads', () => {

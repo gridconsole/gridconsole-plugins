@@ -86,7 +86,7 @@ Work the approved task list in order, one task at a time, and tick each line in 
 
 The list is fixed at approval. If the work needs a step that is not on it, add the line and say plainly that you are adding it — it shows up in Review as a deviation from the plan. Do not renumber or silently rewrite the list. A card sent back from review comes with its findings written into the task list as open "Review finding" rows: fix those and nothing else — a finding you disagree with is answered in the review's Needs-your-eyes list rather than reworked around, and anything else you notice goes to the follow-up card Grid names, not into this diff.
 
-As you finish each task, run the tests of the files and packages you changed, and nothing wider: a task is done when those pass, not when the code is written. The whole suite, a browser and a scratch service are Verify’s job, not yours.
+As you finish each task, run the tests of the files and packages you changed, and nothing wider: a task is done when those pass, not when the code is written. Grid runs the whole suite once in Deliver. Verify reads that result and checks acceptance criteria; do not repeat the suite.
 
 If the plan turns out to be wrong, say so and adjust it in the card body rather than quietly doing something else. When every task is ticked, write the "## Review" section the pipeline protocol describes, set the status it names, and stop there — unless the card is \`difficulty: easy\`, where review is a pass, not a stop: record each test you ran and its result under "### Checks" in "## Review" and, if all passed, move the card on to the stage your session context names in the same turn.`,
   },
@@ -139,7 +139,7 @@ Moving the card on hands it to Verify: a fresh agent when that stage wants anoth
     title: 'Verify',
     file: '.claude/commands/verify.md',
     usedBy: 'deliver -> verify',
-    default: `Verify this card per the verify stage in your session context. Verifying means proving the change works where it runs, scoped to what changed: \`git diff --name-only <base>...HEAD\` says what the diff touches. Restart or start a scratch instance of a service only when the diff touches that service; drive the changed feature end-to-end in the real UI only when it touches UI code — for a UI change, tests alone do not count. Run the thread verification command when one is configured; on an easy card run the tests of the packages the diff touches instead of the whole suite.
+    default: `Verify this card per the verify stage in your session context. Check the acceptance criteria against the changed code. Read the project check already run by Grid in Deliver with \`grid verify status\`; never run the whole suite yourself. Only when relevant code changed after that check, request a rerun through \`grid verify run <id>\`. Use focused unit tests for logic; a live browser is needed only for behaviour that cannot be established by a lightweight test. Start a scratch service only when the change needs it, never restart the user's instance.
 
 A step this machine cannot run at all — driving a browser with no Claude in Chrome pairing is the usual one — is SKIPPED. A skip is neither a pass nor a failure: verify everything that does not need it, record the step that did not run on its own line as \`browser: skipped\` with the reason, and never fold it into a pass.
 

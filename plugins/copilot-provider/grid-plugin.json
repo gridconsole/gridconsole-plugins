@@ -28,7 +28,7 @@
         "--no-remote",
         "--no-color"
       ],
-      "resumeArgv": ["-C", "{cwd}", "--resume", "{sessionId}"],
+      "resumeArgv": ["-C", "{cwd}", "--resume", "{sessionId}", "--no-auto-update", "--no-remote", "--no-color"],
       "env": { "COPILOT_HOME": "{stateDir}/copilot-home" },
       "sessionId": "mint-uuid",
       "transcript": {
@@ -37,7 +37,8 @@
         "map": {
           "user.message": { "role": "user", "text": "data.content" },
           "assistant.message": { "role": "assistant", "text": "data.content" },
-          "tool.execution_start": { "role": "tool", "name": "data.toolName" }
+          "tool.execution_start": { "role": "tool", "name": "data.toolName", "id": "data.toolCallId", "input": "data.arguments" },
+          "tool.execution_complete": { "role": "tool", "id": "data.toolCallId", "result": "data.result.content", "error": "data.error.message", "success": "data.success" }
         }
       },
       "hooks": {

@@ -75,7 +75,7 @@ Decide the size first. A small card — a few files, a change you can describe i
 
 Grid already authorizes you to read, run commands and edit files in this workspace — act on that rather than pausing to check whether you are allowed to look around.
 
-Ask clarifying questions with the ask_user tool — it is asked and answered right here, so ask whenever two readings of the card would lead to materially different work. Record every question and its answer in the card under "### Questions asked".
+Ask clarifying questions with the Grid question command whenever two readings of the card would lead to materially different work. Record every question and its answer in the card under "### Questions asked".
 
 Rewrite the card body, keeping the frontmatter intact, so it carries these sections, plus any Grid asks for further down this message:
 - "### Summary": what this card is, in two or three sentences a stranger could follow.
@@ -88,7 +88,7 @@ Rewrite the card body, keeping the frontmatter intact, so it carries these secti
 
 Write the task list as one markdown checkbox per line, in the order you will do them, each a single action with a verifiable end: "- [ ] Add the limiter middleware to the public router". Five to twelve is normal. Keep the card the size of the ask: the plan delivers what the card asks and nothing more, and anything you notice on the way that it did not ask for — a default worth changing, a neighbouring bug, a refactor — goes under "### Related cards" as a follow-up to file, not into the task list. A card whose list passes twelve tasks or whose files span more than three areas (engine, UI, CLI and docs count separately) is more than one card: offer the masterplan split as the recommended option in the "Ready to build" question. The Doing agent works this list top to bottom and ticks each line as it lands, so no sub-bullets, no prose lines between them, and no step that means several unrelated things.
 
-When the plan is written, ask once with the ask_user tool whether it is ready to build, and wait. That single question is the only approval gate in this stage — do not start building before it is answered.
+When the plan is written, ask once with the Grid question command whether it is ready to build, and wait. That single question is the only approval gate in this stage — do not start building before it is answered.
 
 Approval hands the card on: to a fresh agent when Doing wants another model or runs in another directory (a worktree), otherwise to you, in this conversation. Write the plan as if a stranger will build it either way — the card is the record the next stage reads.`,
   },
@@ -102,7 +102,7 @@ Approval hands the card on: to a fresh agent when Doing wants another model or r
 
 You are sent this message when the card starts and again whenever it is picked back up, so read the card first, including anything you already wrote into it: the card body is the only record of how far the work got. Carry on from there rather than starting again.
 
-Investigate, do the work, and write what you find into the card body as you go. Grid already authorizes you to run commands and edit files in this workspace, so work straight through; reach for the ask_user tool only when a real choice comes up that would change the outcome.
+Investigate, do the work, and write what you find into the card body as you go. Grid already authorizes you to run commands and edit files in this workspace, so work straight through; reach for the Grid question command only when a real choice comes up that would change the outcome.
 
 When the work is done, write the "## Review" section the protocol describes and move the card to the state it names.`,
   },
@@ -118,7 +118,7 @@ Work the approved task list in order, one task at a time, and tick each line in 
 
 The list is fixed at approval. If the work needs a step that is not on it, add the line and say plainly that you are adding it — it shows up in Review as a deviation from the plan. Do not renumber or silently rewrite the list. A card sent back from review comes with its findings written into the task list as open "Review finding" rows: fix those and nothing else — a finding you disagree with is answered in the review's Needs-your-eyes list rather than reworked around, and anything else you notice goes to the follow-up card Grid names, not into this diff.
 
-The plan is approved and Grid already authorizes you to carry it out: edit files and, as you finish each task, run the tests of the files and packages you changed, without stopping to check first, and nothing wider — the whole suite, a browser and a scratch service are Verify's job. A task is done when those tests pass, not when the code is written.
+The plan is approved and Grid already authorizes you to carry it out: edit files and, as you finish each task, run the tests of the files and packages you changed, without stopping to check first, and nothing wider. Grid runs the whole suite once in Deliver. Verify reads that result and checks acceptance criteria; do not repeat the suite. A task is done when those tests pass, not when the code is written.
 
 If the plan turns out to be wrong, say so and adjust it in the card body rather than quietly doing something else. When every task is ticked, write the "## Review" section the pipeline protocol describes, set the status it names, and stop there — unless the card is \`difficulty: easy\`, where review is a pass, not a stop: record each test you ran and its result under "### Checks" in "## Review" and, if all passed, move the card on to the stage your session context names in the same turn.`,
   },
@@ -128,7 +128,7 @@ If the plan turns out to be wrong, say so and adjust it in the card body rather 
     title: 'Self-review',
     file: '.github/prompts/review.md',
     usedBy: 'doing -> review',
-    default: `This card is in review. Unless it is \`difficulty: easy\`, it is waiting on the user, not on you — do not restart the work and do not move the card. An easy card is passing through: if every line under "### Checks" passed, move it on yourself to the stage your session context names; if one failed, fix it, or ask the user with the ask_user tool and stop.
+    default: `This card is in review. Unless it is \`difficulty: easy\`, it is waiting on the user, not on you — do not restart the work and do not move the card. An easy card is passing through: if every line under "### Checks" passed, move it on yourself to the stage your session context names; if one failed, fix it, or ask the user with the Grid question command and stop.
 
 Read the card, its "## Review" section and the current diff, then make that section worth reading in thirty seconds.
 
@@ -150,9 +150,9 @@ What approval does next depends on this thread's delivery policy, and your sessi
     usedBy: 'review -> deliver',
     default: `Deliver this card per the deliver stage in your session context: ship it, then watch the pipeline through to completion and fix what you can — a failing lint, a flaky job, a bad config are yours here.
 
-This thread's delivery policy in your session context is the authority on what needs asking. Where it authorizes an action, take it without a further check-in; where it says ask, use the ask_user tool. Never merge and never deploy further than the policy allows — both of those are the user's.
+This thread's delivery policy in your session context is the authority on what needs asking. Where it authorizes an action, take it without a further check-in; where it says ask, use the Grid question command. Never merge and never deploy further than the policy allows — both of those are the user's.
 
-Record what shipped under "### Delivery" in the card's "## Review" section: the PR/MR URL, the pipeline's verdict, and which environments the deploy actually reached. If the pipeline stays red and you cannot fix it, do not move the card. Write what failed and why under "### Delivery failed", then ask the user with the ask_user tool what to do about that specific failure: fix it, ship without it, or leave it and carry on. Offer the options the failure actually allows, not a generic pair.
+Record what shipped under "### Delivery" in the card's "## Review" section: the PR/MR URL, the pipeline's verdict, and which environments the deploy actually reached. If the pipeline stays red and you cannot fix it, do not move the card. Write what failed and why under "### Delivery failed", then ask the user with the Grid question command what to do about that specific failure: fix it, ship without it, or leave it and carry on. Offer the options the failure actually allows, not a generic pair.
 
 Moving the card on hands it to Verify: a fresh agent when that stage wants another model or directory, otherwise you. Either way, whatever Verify needs to know about what shipped belongs in "### Delivery", not in this conversation.`,
   },
@@ -162,17 +162,23 @@ Moving the card on hands it to Verify: a fresh agent when that stage wants anoth
     title: 'Verify',
     file: '.github/prompts/verify.md',
     usedBy: 'deliver -> verify',
-    default: `Verify this card per the verify stage in your session context. Verifying means proving the change works where it runs, scoped to what changed: \`git diff --name-only <base>...HEAD\` says what the diff touches. Restart or start a scratch instance of a service only when the diff touches that service; drive the changed feature end-to-end in the real UI only when it touches UI code — for a UI change, tests alone do not count. Run the thread verification command when one is configured; on an easy card run the tests of the packages the diff touches instead of the whole suite.
+    default: `Verify this card per the verify stage in your session context. Check the acceptance criteria against the changed code. Read the project check already run by Grid in Deliver with \`grid verify status\`; never run the whole suite yourself. Only when relevant code changed after that check, request a rerun through \`grid verify run <id>\`. Use focused unit tests for logic; a live browser is needed only for behaviour that cannot be established by a lightweight test. Start a scratch service only when the change needs it, never restart the user's instance.
 
-Grid already authorizes starting the app, restarting a service and exercising the feature — do them rather than checking first.
+You are authorized to run the focused checks for this card. Use a scratch instance only when the changed behaviour needs it. Never restart the user's running instance.
 
 A step this machine cannot run at all — driving a browser with no Claude in Chrome pairing is the usual one — is SKIPPED. A skip is neither a pass nor a failure: verify everything that does not need it, record the step that did not run on its own line as \`browser: skipped\` with the reason, and never fold it into a pass.
 
 Record the outcome under "### Verification" in the card's "## Review" section: pass, fail or skipped per step, plus one line of the evidence you actually saw.
 
-Only when nothing failed do you move the card on as the pipeline protocol says. On failure keep it in verify, write what failed under "### Verification failed", and ask the user with the ask_user tool what to do about that failure: fix it, accept it, or roll the change back. Offer the options the failure actually allows. A skip on its own is not a failure and does not hold the card. Findings the adversarial review raised and the user accepted at approve are the user's decision: verify the change, and do not re-open the review or fail the card over them.`,
+Only when nothing failed do you move the card on as the pipeline protocol says. On failure keep it in verify, write what failed under "### Verification failed", and ask the user with the Grid question command what to do about that failure: fix it, accept it, or roll the change back. Offer the options the failure actually allows. A skip on its own is not a failure and does not hold the card. Findings the adversarial review raised and the user accepted at approve are the user's decision: verify the change, and do not re-open the review or fail the card over them.`,
   },
 ];
+
+// Product decisions are persisted on the board. This never grants native permissions.
+for (const entry of PROMPTS) {
+  if (entry.stage === 'prepare') entry.default += '\n\nFor the final plan gate use `grid question ask "Ready to build?" --choices \'["Approve plan","Revise"]\' --json`. Only after the user answers "Approve plan", run `grid card move "$GRID_CARD_PATH" doing --json`. Do not start implementation unless that transition succeeds; Grid applies the normal stage handoff. A revise answer, timeout or error keeps this card in Prepare.';
+  entry.default += '\n\nFor a user decision, run `grid question ask "Your question" --choices \'["Option A","Option B"]\' --json`. Omit --choices for free text. Wait for its answer. After a timeout or disconnect, use `grid question status <id> --json`; neither is approval. Never put secrets in a question. Native permission requests must still be approved through the provider.';
+}
 
 const PROVIDER = {
   id: 'copilot',

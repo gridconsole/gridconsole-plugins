@@ -5,6 +5,16 @@ const { fakePluginContext } = require('../../sdk/index.js');
 const manifest = require('./grid-plugin.json');
 const plugin = require('./index.js');
 
+test('provider contract: Deliver owns the whole-suite run and Verify consumes its recorded result', () => {
+  const verify = plugin.PROMPTS.find((p) => p.stage === 'verify').default;
+  const build = plugin.PROMPTS.find((p) => p.stage === 'build').default;
+  assert.match(verify, /grid verify status/);
+  assert.match(verify, /never run the whole suite yourself/);
+  assert.match(verify, /Only when relevant code changed/);
+  assert.match(build, /Grid runs the whole suite once in Deliver/);
+  assert.doesNotMatch(build, /whole suite[^.]*Verify’s job/);
+});
+
 /** The six stages Grid starts or resumes an agent in, in pipeline order. */
 const STAGES = ['prepare', 'start', 'build', 'review', 'deliver', 'verify'];
 
@@ -387,8 +397,9 @@ test('the light walk is in the prompts themselves, not only in the session conte
   assert.match(at('build'), /"### Checks"/);
   assert.match(at('build'), /move the card on to the stage your session context names/);
   assert.match(at('review'), /An easy card is passing through/);
-  assert.match(at('verify'), /scoped to what changed/);
-  assert.match(at('verify'), /instead of the whole suite/);
+  assert.match(at('verify'), /focused unit tests/);
+  assert.match(at('verify'), /never run the whole suite yourself/);
+  assert.match(at('verify'), /grid verify status/);
   // And no stage promises a fresh agent it may not get: the handoff keeps the
   // agent when the model and directory are unchanged.
   for (const stage of ['prepare', 'review', 'deliver']) {

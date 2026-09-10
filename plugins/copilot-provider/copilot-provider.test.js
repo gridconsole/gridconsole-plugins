@@ -5,6 +5,16 @@ const { fakePluginContext } = require('../../sdk/index.js');
 const manifest = require('./grid-plugin.json');
 const plugin = require('./index.js');
 
+test('provider contract: Deliver owns the whole-suite run and Verify consumes its recorded result', () => {
+  const verify = plugin.PROMPTS.find((p) => p.stage === 'verify').default;
+  const build = plugin.PROMPTS.find((p) => p.stage === 'build').default;
+  assert.match(verify, /grid verify status/);
+  assert.match(verify, /never run the whole suite yourself/);
+  assert.match(verify, /Only when relevant code changed/);
+  assert.match(build, /Grid runs the whole suite once in Deliver/);
+  assert.doesNotMatch(build, /whole suite[^.]*Verify’s job/);
+});
+
 /** The six stages Grid starts or resumes an agent in, in pipeline order. */
 const STAGES = ['prepare', 'start', 'build', 'review', 'deliver', 'verify'];
 
@@ -266,19 +276,19 @@ test('the acting stages say the work is already authorized', () => {
   }
 });
 
-test('the prepare prompt keeps the approval gate and names the ask_user tool', () => {
+test('the prepare prompt keeps the approval gate and names the Grid question command', () => {
   const prepare = plugin.PROMPTS.find((s) => s.stage === 'prepare');
   assert.match(prepare.default, /ready to build/i);
   assert.match(prepare.default, /do not start building before it is answered/i);
-  assert.match(prepare.default, /ask_user/);
+  assert.match(prepare.default, /grid question ask/);
 });
 
 // Copilot's escalation keeps a real tool, unlike codex-provider's (which has
 // none) — and it is Copilot's own tool name, not Claude's.
-test('deliver and verify escalate with the ask_user tool, and no prompt names the wrong provider\'s tool', () => {
+test('deliver and verify escalate with the Grid question command, and no prompt names the wrong provider\'s tool', () => {
   for (const stage of ['deliver', 'verify']) {
     const entry = plugin.PROMPTS.find((s) => s.stage === stage);
-    assert.match(entry.default, /ask the user with the ask_user tool/);
+    assert.match(entry.default, /ask the user with the Grid question command/);
   }
   for (const entry of plugin.PROMPTS) {
     assert.ok(!/AskUserQuestion/.test(entry.default), `${entry.stage} names a tool this provider does not have`);
@@ -292,7 +302,7 @@ test('deliver and verify escalate with the ask_user tool, and no prompt names th
 // message lands — no shipped prompt may read as a request for permission to
 // act. The siblings have no such test; it is added here because this is the
 // provider that most needs it: `--effort`/`--model` aside, an agent that
-// stops to ask "may I?" with the ask_user tool sitting right there is the
+// stops to ask "may I?" with the Grid question command sitting right there is the
 // specific failure mode this card exists to rule out.
 test('no shipped prompt asks for permission to act', () => {
   const forbidden = [/\bmay i\b/i, /\bshould i proceed\b/i, /\bask for permission\b/i];
