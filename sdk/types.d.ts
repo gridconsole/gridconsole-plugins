@@ -46,13 +46,13 @@ export interface SettingSpec {
  *  can only be printed and never picked. Declare `configuration` instead. */
 export type SettingRow = [key: string, type: string, value: string];
 
-/** The seventeen published extension points. A point outside this union is
+/** The sixteen published extension points. A point outside this union is
  *  refused when the manifest is read, not when `contribute` is called. */
 export type ExtensionPoint =
   | 'stage.transition' | 'agent.provider' | 'llm.provider' | 'panel.slot'
   | 'editor.contextMenu' | 'keymap.command' | 'mcp.server' | 'sdlc.workflow'
   | 'card.section' | 'deliver.target' | 'file.explain' | 'usage.reporter'
-  | 'report.redactor' | 'theme.register' | 'dictate.provider'
+  | 'report.redactor' | 'theme.register'
   | 'settings.page' | 'prompt.file';
 
 /**
